@@ -1,0 +1,11 @@
+{
+  "name": "sweetverse-cosmic",
+  "version": "0.2.4",
+  "description": "เกม Match-3 กึ่งแอคชั่น ตีมลูกกวาดอวกาศ 8-bit + ระบบ Joker",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/test.js",
+    "start": "python3 -m http.server 8000"
+  },
+  "license": "MIT"
+}
