@@ -298,5 +298,39 @@ console.log('--- Game Feel (TASK 001) ---');
   ok(obj.x === 0 && done, 'หลัง delay tween วิ่งจนจบปกติ');
 }
 
+console.log('--- GemArt: ทรงเจมเอกลักษณ์ (TASK-004) ---');
+{
+  const { GemArt } = await import('../js/engine/GemArt.js');
+  // mask ทรง (สนใจแค่ "มีพิกเซลไหม" ไม่สนสี) — วัดความต่างของ silhouette ล้วนๆ
+  const mask = (t) => GemArt.spriteData(t).map((row) => row.map((c) => (c ? 1 : 0)).join('')).join('|');
+  const masks = [0, 1, 2, 3, 4, 5].map(mask);
+  let allDiff = true;
+  for (let a = 0; a < 6; a++) for (let b = a + 1; b < 6; b++) {
+    if (masks[a] === masks[b]) allDiff = false;
+  }
+  ok(allDiff, 'ทรงทั้ง 6 ไม่ซ้ำกันเลย (เทียบ mask เป็นคู่ทุกคู่)');
+
+  // ความต่างต้อง "มากพอ" ไม่ใช่ต่างแค่พิกเซลเดียว — นับจุดที่ mask ต่างกันขั้นต่ำ 12 จุด
+  const diffCount = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++; return n; };
+  let minDiff = Infinity;
+  for (let a = 0; a < 6; a++) for (let b = a + 1; b < 6; b++) minDiff = Math.min(minDiff, diffCount(masks[a], masks[b]));
+  ok(minDiff >= 12, 'คู่ที่คล้ายสุดยังต่างกัน >= 12 พิกเซล (ได้ ' + minDiff + ')');
+
+  let allValid = true;
+  for (let t = 0; t < 6; t++) {
+    const g = GemArt.spriteData(t);
+    let pixels = 0, outline = 0;
+    for (const row of g) for (const c of row) {
+      if (c) pixels++;
+      if (c === GemArt.OUTLINE) outline++;
+    }
+    if (pixels < 60 || outline < 16) allValid = false;
+  }
+  ok(allValid, 'ทุกทรงมีเนื้อ >= 60 px และเปลือก >= 16 px (อ่านออกที่ขนาดเกมจริง)');
+
+  ok(GemArt.PROFILES.length === 6 && GemArt.PROFILES.every((p) => typeof p.shape === 'function'),
+    'ทุกเจมมี rendering profile ของตัวเอง (shape function ครบ 6)');
+}
+
 console.log('\nผลรวม: ' + pass + ' ผ่าน, ' + fail + ' ไม่ผ่าน');
 process.exit(fail > 0 ? 1 : 0);

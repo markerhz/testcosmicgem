@@ -40,7 +40,118 @@ export class GemArt {
   // =====================================================
 
   /**
+   * โปรไฟล์การเรนเดอร์ต่อเจม (TASK-004) — แต่ละเจมมี "ทรง" (shape) + "รายละเอียด" (detail) ของตัวเอง
+   * shape(dx,dy,x,y)  → { in: อยู่ในตัวเจมไหม, edge: อยู่บนเปลือก/ขอบไหม }
+   * detail(grid,P)    → วาดลายเฉพาะตัวทับหลังแรเงาพื้นฐาน (แกน, ร่อง, เส้นแร่ ฯลฯ)
+   * การแรเงาพื้นฐาน (แสงบนซ้าย/เงาล่างขวา) ใช้ร่วมกันใน spriteData — ไม่มีโค้ดวาดซ้ำ
+   */
+  static PROFILES = [
+    { // 0 — Ruby Core: ผลึกหกเหลี่ยมหนัก เปลือกหินหนา แกนหลอมร้อน
+      shape(dx, dy) {
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+        const m = Math.max(ax / 6.4, (0.5 * ax + ay) / 7.4);
+        return { in: m <= 1, edge: m > 0.72 }; // เปลือกหนาเป็นเอกลักษณ์
+      },
+      detail(grid, P) {
+        GemArt.paintCore(grid, 7.5, 8, 1.9, P.s, P.l); // แกนหลอมร้อนค่อนล่าง
+      },
+    },
+    { // 1 — Nova Crystal: ผลึกดาวแฉกแผ่รังสี แกนกลางสว่างจ้า
+      shape(dx, dy) {
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+        const m = ax + ay + 1.25 * Math.min(ax, ay);
+        return { in: m <= 9.5, edge: m > 7.6 };
+      },
+      detail(grid, P) {
+        GemArt.paintCore(grid, 7.5, 7.5, 1.6, '#ffffff', P.s);
+      },
+    },
+    { // 2 — Emerald Pulse: ผลึกธรรมชาติทรงสูง งอกเบี้ยวข้างซ้าย + เส้นแร่กลางลำ
+      shape(dx, dy) {
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+        const bump = (dx < 0 && dy > -2 && dy < 3) ? 1.2 : 0; // ปุ่มงอกออร์แกนิกฝั่งซ้าย
+        const wid = 4.3 + bump;
+        const inn = ay <= 6.9 && ax <= wid && ax + Math.max(0, ay - 4.2) * 1.3 <= wid + 2.2;
+        const wid2 = wid - 1.15;
+        const edge = !(ay <= 5.9 && ax <= wid2 && ax + Math.max(0, ay - 3.4) * 1.3 <= wid2 + 2.2);
+        return { in: inn, edge };
+      },
+      detail(grid, P) {
+        // เส้นแร่ (vein) คดเคี้ยวกลางลำ
+        for (let y = 3; y <= 12; y++) {
+          const vx = 7 + ((y % 4 < 2) ? 0 : 1);
+          if (grid[y] && grid[y][vx] && grid[y][vx] !== GemArt.OUTLINE) grid[y][vx] = P.s;
+        }
+      },
+    },
+    { // 3 — Meteor Shard: สะเก็ดแหลมอสมมาตร ขอบแตกหยาบ แกนเรืองเย็น
+      shape(dx, dy, x, y) {
+        const j = ((x * 7 + y * 13) % 3) * 0.32; // ความหยาบของขอบ (deterministic)
+        const cuts = [
+          0.95 * dx + 0.45 * dy - 5.3,
+          -0.85 * dx + 0.55 * dy - 5.1,
+          0.15 * dx - 1.0 * dy - 6.2,
+          -0.55 * dx - 0.95 * dy - 5.9,
+          1.0 * dx - 0.5 * dy - 5.6,
+        ];
+        let maxCut = -Infinity;
+        for (const c of cuts) if (c > maxCut) maxCut = c;
+        return { in: maxCut + j <= 0, edge: maxCut + j > -1.45 };
+      },
+      detail(grid, P) {
+        GemArt.paintCore(grid, 8.5, 6.5, 1.7, P.s, P.l); // แกนเรืองเย็น
+        // รอยร้าวเฉียงสั้นๆ
+        for (const [cx, cy] of [[5, 9], [6, 10], [10, 9], [11, 10]]) {
+          if (grid[cy] && grid[cy][cx] && grid[cy][cx] !== GemArt.OUTLINE) grid[cy][cx] = P.d;
+        }
+      },
+    },
+    { // 4 — Nebula Prism: ปริซึมออร์แกนิกเบี้ยว ทรงลื่นไหล เรืองในนุ่ม
+      shape(dx, dy) {
+        const nx = dx + dy * 0.3; // เอียงทั้งทรง = อสมมาตร
+        const m = Math.pow(Math.abs(nx) / 5.9, 1.7) + Math.pow(Math.abs(dy) / 6.7, 1.7);
+        return { in: m <= 1, edge: m > 0.66 };
+      },
+      detail(grid, P) {
+        GemArt.paintCore(grid, 7, 8, 2.4, P.l, null);  // เรืองในกว้างนุ่ม
+        GemArt.paintCore(grid, 7, 8, 1.1, P.s, null);
+      },
+    },
+    { // 5 — Solar Core: ผลึกกลมหนาแน่น ร่องกลไกพาดขวาง แกนทองสว่าง
+      shape(dx, dy) {
+        const r2 = dx * dx + dy * dy;
+        return { in: r2 <= 52, edge: r2 > 38 };
+      },
+      detail(grid, P) {
+        // ร่องกลไก: แถวเว้นระยะสม่ำเสมอ (เฉพาะเนื้อใน ไม่ทับขอบ/แกน)
+        for (const gy of [4, 7, 10]) {
+          for (let x = 0; x < GemArt.SPRITE; x++) {
+            const c = grid[gy] && grid[gy][x];
+            if (c && c !== GemArt.OUTLINE) grid[gy][x] = P.d;
+          }
+        }
+        GemArt.paintCore(grid, 7.5, 7.5, 1.8, P.s, P.l); // แกนทอง (ทับร่องได้)
+      },
+    },
+  ];
+
+  /** ตัวช่วยกลาง: ระบายแกนกลม (สีในสุด + วงรอบ) เฉพาะบนเนื้อเจม — ใช้ร่วมทุกโปรไฟล์ */
+  static paintCore(grid, cx, cy, r, colInner, colOuter) {
+    const S = GemArt.SPRITE;
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const c = grid[y][x];
+        if (!c || c === GemArt.OUTLINE) continue;
+        const d = Math.hypot(x - cx, y - cy);
+        if (d <= r) grid[y][x] = colInner;
+        else if (colOuter && d <= r + 1) grid[y][x] = colOuter;
+      }
+    }
+  }
+
+  /**
    * คืนตารางสี 16x16 ของเจมชนิดนั้น (null = โปร่งใส)
+   * ทรงมาจาก PROFILES[type].shape → แรเงากลางร่วมกัน → detail เฉพาะตัว
    * @param {number} type 0..5
    * @returns {(string|null)[][]} grid[y][x]
    */
@@ -48,71 +159,20 @@ export class GemArt {
     const P = GemArt.PALETTE[type];
     const O = GemArt.OUTLINE;
     const S = GemArt.SPRITE;
+    const prof = GemArt.PROFILES[type];
     const grid = [];
     for (let y = 0; y < S; y++) {
       grid[y] = [];
       for (let x = 0; x < S; x++) {
         const dx = x - 7.5, dy = y - 7.5;
-        const r2 = dx * dx + dy * dy;
-        let col = null;
-
-        // ทรงกลมพื้นฐาน (รัศมี 7.4 — เต็มช่องเกือบสุด): ขอบนอก + แสงบน-ซ้าย + เงาล่าง-ขวา
-        if (r2 <= 54.76) {
-          if (r2 > 40.96) col = O;
-          else col = (dx + dy < -3.5) ? P.l : (dx + dy > 4.5 ? P.d : P.m);
-        }
-
-        // ---- ลายประจำชนิด ----
-        switch (type) {
-          case 0: // วงแหวนดาวเคราะห์พาดกลาง
-            if (y === 8) col = (col === null) ? P.s : (col === O ? O : P.s);
-            if (y === 9 && col !== null && col !== O) col = P.d;
-            break;
-          case 1: // ดาวประกายกากบาท
-            if (col !== null && col !== O) {
-              const ax = Math.abs(dx), ay = Math.abs(dy);
-              if ((ax < 1 && ay < 4.5) || (ay < 1 && ax < 4.5) || (ax < 2 && ay < 2)) col = P.s;
-            }
-            break;
-          case 2: { // คริสตัลเพชร
-            const man = Math.abs(dx) + Math.abs(dy);
-            if (col !== null && col !== O) {
-              if (man <= 4) col = P.s;
-              else if (man <= 5) col = P.l;
-            }
-            break;
-          }
-          case 3: { // จันทร์เสี้ยว (วงกลมสว่าง โดนวงเงากินมุมบนขวา)
-            if (col !== null && col !== O) {
-              if (r2 <= 25) col = P.s;
-              const cx = x - 9.5, cy = y - 5.5;
-              if (cx * cx + cy * cy <= 20 && col === P.s) col = P.m;
-            }
-            break;
-          }
-          case 4: { // วงโคจร + ดวงจันทร์เล็ก
-            if (col !== null && col !== O) {
-              const r = Math.sqrt(r2);
-              if (Math.abs(r - 5.2) <= 0.75) col = P.s;
-            }
-            const mx = x - 13, my = y - 7;
-            if (mx * mx + my * my <= 2 && col !== null && col !== O) col = P.l;
-            break;
-          }
-          case 5: { // ดาวหาง: หัวสว่าง + หางเฉียงล่างซ้าย
-            const hx = x - 10, hy = y - 5;
-            if (hx * hx + hy * hy <= 6.25 && col !== null && col !== O) col = P.s;
-            const t = ((10 - x) + (y - 5)) / 2;      // ระยะตามแนวหาง
-            const off = (10 - x) - (y - 5);          // ระยะเบี่ยงข้างหาง
-            if (t >= 1 && t <= 5.5 && Math.abs(off) <= (5.5 - t) / 2) {
-              col = (col === null) ? P.l : (col === O ? O : P.l);
-            }
-            break;
-          }
-        }
-        grid[y][x] = col;
+        const { in: inside, edge } = prof.shape(dx, dy, x, y);
+        if (!inside) { grid[y][x] = null; continue; }
+        if (edge) { grid[y][x] = O; continue; }
+        // แรเงาพื้นฐานร่วม: แสงบน-ซ้าย / เงาล่าง-ขวา
+        grid[y][x] = (dx + dy < -2.5) ? P.l : (dx + dy > 3.5 ? P.d : P.m);
       }
     }
+    if (prof.detail) prof.detail(grid, P);
     return grid;
   }
 
