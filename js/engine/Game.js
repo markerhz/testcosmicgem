@@ -32,7 +32,7 @@ export class Game {
   static SWAP_DURATION = 160;
   /** ระยะเวลาอนิเมชันแตก (ms) */
   static POP_DURATION = 180;
-  /** ระยะเวลาอนิเมชันหล่น (ms) */
+  /** ระยะเวลาอนิเมชันหล่น (ms) — เหลือไว้เป็นค่าอ้างอิง (TASK 001: ใช้เวลาตามระยะจริงใน dropAndRefill) */
   static FALL_DURATION = 260;
 
   /**
@@ -44,7 +44,7 @@ export class Game {
     this.effects = new Effects();
     this.board = new Board();
 
-    // ---- Systems (v0.2.0: โครงเปล่า พร้อมเสียบลอจิกใน v0.2.x) ----
+    // ---- Systems ----
     this.matchSystem = new MatchSystem(this.board);
     this.gravitySystem = new GravitySystem(this.board);
     this.scoreSystem = new ScoreSystem();
@@ -60,6 +60,9 @@ export class Game {
     this.selected = null;
     this.state = State.IDLE;
     this.lastTime = 0;
+
+    /** hit-stop: หยุดอนิเมชัน/เอฟเฟกต์สั้นๆ ตอนอิมแพกต์ใหญ่ (ยังวาดต่อ) — จูซคลาสสิก */
+    this.freezeTime = 0;
 
     // ---- HUD (DOM) ----
     this.scoreEl = document.getElementById('score');
@@ -96,15 +99,24 @@ export class Game {
     const dt = Math.min(32, time - this.lastTime); // กันเฟรมกระโดดตอนสลับแท็บ
     this.lastTime = time;
 
-    this.animation.update(dt);
-    this.effects.update(dt);
+    if (this.freezeTime > 0) {
+      this.freezeTime -= dt; // hit-stop: โลกหยุดชั่วขณะ แต่ยังวาดเฟรมค้างไว้
+    } else {
+      this.animation.update(dt);
+      this.effects.update(dt);
+    }
     this.renderer.draw(this.board, this.selected, time, this.effects);
 
     requestAnimationFrame((t) => this.loop(t));
   }
 
+  /** หยุดโลกสั้นๆ ตอนอิมแพกต์ — ของแรงกว่าทับของเบากว่า */
+  hitStop(ms) {
+    this.freezeTime = Math.max(this.freezeTime, ms);
+  }
+
   // =====================================================
-  // การเลือก + สลับ (ฟีเจอร์หลักของ v0.2.0)
+  // การเลือก + สลับ
   // =====================================================
 
   /** ผู้เล่นแตะช่อง (col,row) */
@@ -167,9 +179,10 @@ export class Game {
     } else {
       const matches = this.matchSystem.findMatches();
       if (matches.length === 0) {
-        // ไม่เกิด match → สลับกลับ
+        // ไม่เกิด match → สลับกลับเร็วกว่าขาไป + สั่นจอเบาๆ บอกว่า "ไม่ได้นะ"
         this.sfx.invalid();
-        await this.animateSwap(a, b);
+        this.effects.shake(2.5, 130);
+        await this.animateSwap(a, b, Game.SWAP_DURATION * 0.75);
         this.state = State.IDLE;
         return;
       }
@@ -189,7 +202,7 @@ export class Game {
   }
 
   /** สลับข้อมูล + เลื่อนภาพนุ่มๆ แบบ ease-in-out พร้อมบีบ/ยืดตามแนวสลับ (เรียกซ้ำ = สลับกลับ) */
-  animateSwap(a, b) {
+  animateSwap(a, b, duration = Game.SWAP_DURATION) {
     const C = Renderer.CELL;
     const dx = (b.col - a.col) * C;
     const dy = (b.row - a.row) * C;
@@ -204,10 +217,10 @@ export class Game {
     const stretchPeak = horizontal ? { scaleX: 0.16, scaleY: -0.12 } : { scaleX: -0.12, scaleY: 0.16 };
 
     return Promise.all([
-      this.animation.tween(a.candy, { offsetX: 0, offsetY: 0 }, Game.SWAP_DURATION, Easing.easeInOutQuad),
-      this.animation.tween(b.candy, { offsetX: 0, offsetY: 0 }, Game.SWAP_DURATION, Easing.easeInOutQuad),
-      this.animation.bump(a.candy, stretchPeak, Game.SWAP_DURATION),
-      this.animation.bump(b.candy, stretchPeak, Game.SWAP_DURATION),
+      this.animation.tween(a.candy, { offsetX: 0, offsetY: 0 }, duration, Easing.easeInOutQuad),
+      this.animation.tween(b.candy, { offsetX: 0, offsetY: 0 }, duration, Easing.easeInOutQuad),
+      this.animation.bump(a.candy, stretchPeak, duration),
+      this.animation.bump(b.candy, stretchPeak, duration),
     ]);
   }
 
@@ -261,7 +274,7 @@ export class Game {
   }
 
   /**
-   * 1 สเต็ปการแตก: อนิเมชันหด → ลบ → แปลงช่องเกิดตัวพิเศษ → คิดคะแนน
+   * 1 สเต็ปการแตก: อนิเมชัน 2 จังหวะ → ลบ → แปลงช่องเกิดตัวพิเศษ → คิดคะแนน
    * @param {Set} clear ช่องที่จะแตก
    * @param {Array<{cell:object, type:number, special:string}>} spawns ตัวพิเศษที่จะเกิด
    * @param {{chain:number, bombs:number, novas:number}} ctx
@@ -278,59 +291,84 @@ export class Game {
     const shakeMag = (ctx.novas ? 10 : 0) + (ctx.bombs ? 6 : 0) + Math.min(cells.length, 10) * 0.3;
     if (shakeMag > 0) this.effects.shake(shakeMag, 220);
 
-    // พาร์ติเคิลระเบิดสีลูกกวาดตัวเอง (จับสีก่อนลบข้อมูลทิ้ง)
+    // hit-stop ตอนอิมแพกต์ใหญ่: โนวา > ระเบิด > คอมโบยาว
+    if (ctx.novas) this.hitStop(90);
+    else if (ctx.bombs) this.hitStop(60);
+    else if (ctx.chain >= 4) this.hitStop(45);
+
+    // พาร์ติเคิลสีลูกกวาดตัวเอง — คอมโบสูง/ตัวพิเศษ = เยอะและแรงขึ้น
+    const power = 1 + (ctx.chain - 1) * 0.15;
     let sumX = 0, sumY = 0;
     for (const cell of cells) {
       const cx = cell.col * C + C / 2, cy = cell.row * C + C / 2;
       sumX += cx; sumY += cy;
       const type = cell.candy.special ? null : cell.candy.type;
       const color = type !== null ? Renderer.PALETTE[type].m : '#ffd84d';
-      this.effects.burst(cx, cy, color, cell.candy.special ? 16 : 7);
+      this.effects.burst(cx, cy, color, cell.candy.special ? 18 : 6 + ctx.chain * 2, Math.random, cell.candy.special ? power + 0.5 : power);
     }
 
-    // อนิเมชันแตก (ช่องที่จะกลายเป็นตัวพิเศษไม่ต้องหด)
+    // ป้าย COMBO กลางกระดานเมื่อ cascade ต่อเนื่อง
+    if (ctx.chain >= 2) {
+      this.effects.floatText(256, 205, 'COMBO x' + ctx.chain, '#ffd84d', true);
+    }
+
+    // อนิเมชันแตกแบบ 2 จังหวะ: พองขึ้นวูบ (anticipation) → หดหายแบบไล่คลื่น (ripple)
+    const popping = cells.filter((cell) => !spawnCells.has(cell));
+    await Promise.all(popping.map((cell) => this.animation.bump(cell.candy, { scale: 0.18 }, 70)));
     await Promise.all(
-      cells
-        .filter((cell) => !spawnCells.has(cell))
-        .map((cell) => this.animation.tween(cell.candy, { scale: 0 }, Game.POP_DURATION))
+      popping.map((cell, i) =>
+        this.animation.tween(cell.candy, { scale: 0 }, Game.POP_DURATION, Easing.easeInQuad, Math.min(i * 14, 140))
+      )
     );
-    for (const cell of cells) {
-      if (!spawnCells.has(cell)) cell.candy = null;
-    }
+    for (const cell of popping) cell.candy = null;
 
-    // แปลงช่องเกิดตัวพิเศษ: ลูกกวาดใหม่สีเดิม + ติดตั้ง special
+    // แปลงช่องเกิดตัวพิเศษ: ลูกกวาดใหม่สีเดิม + ติดตั้ง special แบบ pop-in เด้งเข้า
     for (const s of spawns) {
       const candy = new Candy(s.type);
       candy.special = s.special;
+      candy.scale = 0;
       s.cell.candy = candy;
+      this.animation.tween(candy, { scale: 1 }, 220, Easing.easeOutBack);
     }
 
     // คิดคะแนน: นับทุกช่องที่ถูกเคลียร์ (รวมช่องที่แปลงเป็นตัวพิเศษ) + โบนัสระเบิด/โนวา
     const result = this.scoreSystem.addMatchScore(cells, ctx);
     this.updateHUD(result);
 
-    // เลขคะแนนลอยขึ้นตรงจุดศูนย์กลางของกลุ่มที่แตก
+    // เลขคะแนนลอยขึ้นตรงจุดศูนย์กลางของกลุ่มที่แตก — ก้อนโตตัวใหญ่
     const color = result.mult > 1.5 ? '#ffd84d' : '#ffffff';
-    this.effects.floatText(sumX / cells.length, sumY / cells.length, '+' + result.gained, color);
+    this.effects.floatText(sumX / cells.length, sumY / cells.length, '+' + result.gained, color, result.gained >= 200);
   }
 
-  /** แรงโน้มถ่วง + เติมใหม่ พร้อมอนิเมชันหล่น + เด้งลงจอด (⑦ Landing Bounce) */
+  /** แรงโน้มถ่วง + เติมใหม่: ระยะไกลใช้เวลานานขึ้นตามจริง + เด้งลงจอด + ฝุ่นตอนกระแทก */
   async dropAndRefill() {
     const C = Renderer.CELL;
     const tweens = [];
+    /** เวลาไม่คงที่แล้ว — คิดตามระยะหล่น (แถว) ให้ฟีลแรงโน้มถ่วงจริง */
+    const fallTime = (rows) => Math.min(140 + rows * 42, 380);
+    const dustAt = []; // จุดที่จะปล่อยฝุ่นตอนลงจอด (เฉพาะหล่นไกล)
 
     const falls = this.gravitySystem.applyGravity();
     for (const f of falls) {
+      const dist = f.toRow - f.fromRow;
       const candy = this.board.getCell(f.col, f.toRow).candy;
-      candy.offsetY = -(f.toRow - f.fromRow) * C; // ภาพยังอยู่ที่เดิม
-      tweens.push(this.animation.tween(candy, { offsetY: 0 }, Game.FALL_DURATION, Easing.easeOutBack));
+      candy.offsetY = -dist * C; // ภาพยังอยู่ที่เดิม
+      tweens.push(this.animation.tween(candy, { offsetY: 0 }, fallTime(dist), Easing.easeOutBack));
+      if (dist >= 2) dustAt.push({ x: f.col * C + C / 2, y: f.toRow * C + C * 0.82 });
     }
     const spawned = this.gravitySystem.refill();
     for (const s of spawned) {
+      const dist = s.row + 1.5;
       const candy = this.board.getCell(s.col, s.row).candy;
-      candy.offsetY = -(s.row + 1.5) * C; // spawn จากเหนือกระดาน
-      tweens.push(this.animation.tween(candy, { offsetY: 0 }, Game.FALL_DURATION, Easing.easeOutBack));
+      candy.offsetY = -dist * C; // spawn จากเหนือกระดาน
+      // ไล่คอลัมน์ทีละนิดให้เหมือนเครื่องขุดปล่อยเม็ดเป็นคลื่น (Mining Machine feel)
+      tweens.push(this.animation.tween(candy, { offsetY: 0 }, fallTime(dist), Easing.easeOutBack, s.col * 12));
     }
     await Promise.all(tweens);
+
+    // ฝุ่นเบาๆ ตรงจุดลงจอด (จำกัดจำนวนกันรก)
+    for (const d of dustAt.slice(0, 8)) {
+      this.effects.burst(d.x, d.y, '#cfd8ff', 3, Math.random, 0.45);
+    }
   }
 }
