@@ -11,7 +11,7 @@
  */
 import { Renderer } from './Renderer.js';
 import { Input } from './Input.js';
-import { Animation } from './Animation.js';
+import { Animation, Easing } from './Animation.js';
 import { Effects } from './Effects.js';
 import { Sfx } from './Sfx.js';
 import { Board } from '../board/Board.js';
@@ -188,20 +188,26 @@ export class Game {
     this.state = State.IDLE;
   }
 
-  /** สลับข้อมูล + เลื่อนภาพนุ่มๆ (เรียกซ้ำ = สลับกลับ) */
+  /** สลับข้อมูล + เลื่อนภาพนุ่มๆ แบบ ease-in-out พร้อมบีบ/ยืดตามแนวสลับ (เรียกซ้ำ = สลับกลับ) */
   animateSwap(a, b) {
     const C = Renderer.CELL;
     const dx = (b.col - a.col) * C;
     const dy = (b.row - a.row) * C;
+    const horizontal = dx !== 0;
 
     // สลับข้อมูลทันที แล้วตั้ง offset ให้ "ภาพ" ยังอยู่ที่เดิม จากนั้น tween เข้า 0
     this.board.swapCandies(a, b);
     b.candy.offsetX = -dx; b.candy.offsetY = -dy;
     a.candy.offsetX = dx;  a.candy.offsetY = dy;
 
+    // ยืดตามแนวเคลื่อนที่ + บีบตามขวางเล็กน้อย (squash & stretch แบบการ์ตูนคลาสสิก)
+    const stretchPeak = horizontal ? { scaleX: 0.16, scaleY: -0.12 } : { scaleX: -0.12, scaleY: 0.16 };
+
     return Promise.all([
-      this.animation.tween(a.candy, { offsetX: 0, offsetY: 0 }, Game.SWAP_DURATION),
-      this.animation.tween(b.candy, { offsetX: 0, offsetY: 0 }, Game.SWAP_DURATION),
+      this.animation.tween(a.candy, { offsetX: 0, offsetY: 0 }, Game.SWAP_DURATION, Easing.easeInOutQuad),
+      this.animation.tween(b.candy, { offsetX: 0, offsetY: 0 }, Game.SWAP_DURATION, Easing.easeInOutQuad),
+      this.animation.bump(a.candy, stretchPeak, Game.SWAP_DURATION),
+      this.animation.bump(b.candy, stretchPeak, Game.SWAP_DURATION),
     ]);
   }
 
@@ -308,7 +314,7 @@ export class Game {
     this.effects.floatText(sumX / cells.length, sumY / cells.length, '+' + result.gained, color);
   }
 
-  /** แรงโน้มถ่วง + เติมใหม่ พร้อมอนิเมชันหล่น */
+  /** แรงโน้มถ่วง + เติมใหม่ พร้อมอนิเมชันหล่น + เด้งลงจอด (⑦ Landing Bounce) */
   async dropAndRefill() {
     const C = Renderer.CELL;
     const tweens = [];
@@ -317,13 +323,13 @@ export class Game {
     for (const f of falls) {
       const candy = this.board.getCell(f.col, f.toRow).candy;
       candy.offsetY = -(f.toRow - f.fromRow) * C; // ภาพยังอยู่ที่เดิม
-      tweens.push(this.animation.tween(candy, { offsetY: 0 }, Game.FALL_DURATION));
+      tweens.push(this.animation.tween(candy, { offsetY: 0 }, Game.FALL_DURATION, Easing.easeOutBack));
     }
     const spawned = this.gravitySystem.refill();
     for (const s of spawned) {
       const candy = this.board.getCell(s.col, s.row).candy;
       candy.offsetY = -(s.row + 1.5) * C; // spawn จากเหนือกระดาน
-      tweens.push(this.animation.tween(candy, { offsetY: 0 }, Game.FALL_DURATION));
+      tweens.push(this.animation.tween(candy, { offsetY: 0 }, Game.FALL_DURATION, Easing.easeOutBack));
     }
     await Promise.all(tweens);
   }

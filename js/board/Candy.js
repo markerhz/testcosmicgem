@@ -17,6 +17,9 @@ export class Candy {
     this.offsetX = 0;
     this.offsetY = 0;
     this.scale = 1;
+    // บีบ/ยืด (squash & stretch) แยกแกน X/Y — ใช้ตอนสลับ (⑦ Animation), ปกติ = 1 ทั้งคู่
+    this.scaleX = 1;
+    this.scaleY = 1;
 
     // ชนิดพิเศษ (bomb / nova) — จะใช้งานจริงใน v0.2.x
     this.special = null;

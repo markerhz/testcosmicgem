@@ -9,6 +9,12 @@ export const Easing = {
   linear: (t) => t,
   easeOutQuad: (t) => t * (2 - t),
   easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+  /** เด้งเลยเป้าหมายนิดนึงก่อนตกกลับที่ — ใช้ตอนลูกกวาดหล่นลงจอด (⑦ Landing Bounce) */
+  easeOutBack: (t) => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    const p = t - 1;
+    return 1 + c3 * p * p * p + c1 * p * p;
+  },
 };
 
 class Tween {
@@ -46,9 +52,39 @@ class Tween {
   }
 }
 
+/**
+ * BumpTween — ขยับค่าขึ้นไปพีคกลางทาง แล้วกลับที่เดิม (รูประฆังคว่ำ sin)
+ * ต่างจาก Tween ปกติที่ไปจาก "ค่าเริ่ม" ถึง "ค่าปลาย" ตรงๆ
+ * ใช้กับ squash/stretch ตอนสลับลูกกวาด (⑦ Animation)
+ */
+class BumpTween {
+  constructor(target, prop, peakDelta, duration, resolve) {
+    this.target = target;
+    this.prop = prop;
+    this.base = target[prop];
+    this.peakDelta = peakDelta;
+    this.duration = duration;
+    this.resolve = resolve;
+    this.elapsed = 0;
+  }
+
+  update(dt) {
+    this.elapsed += dt;
+    const t = Math.min(1, this.elapsed / this.duration);
+    const bump = Math.sin(Math.PI * t); // 0 → 1 → 0
+    this.target[this.prop] = this.base + this.peakDelta * bump;
+    if (t >= 1) {
+      this.target[this.prop] = this.base;
+      this.resolve();
+      return true;
+    }
+    return false;
+  }
+}
+
 export class Animation {
   constructor() {
-    /** @type {Tween[]} */
+    /** @type {Array<Tween|BumpTween>} */
     this.tweens = [];
   }
 
@@ -61,6 +97,22 @@ export class Animation {
     return new Promise((resolve) => {
       this.tweens.push(new Tween(target, props, duration, ease, resolve));
     });
+  }
+
+  /**
+   * เริ่ม bump (พีคกลางทางแล้วกลับที่เดิม) — หลายพร็อพพร้อมกันได้
+   * @param {object} target
+   * @param {Object<string,number>} peakDeltas เช่น { scaleX: 0.18, scaleY: -0.12 }
+   * @param {number} duration
+   * @returns {Promise<void>}
+   */
+  bump(target, peakDeltas, duration) {
+    const keys = Object.keys(peakDeltas);
+    return Promise.all(
+      keys.map((key) => new Promise((resolve) => {
+        this.tweens.push(new BumpTween(target, key, peakDeltas[key], duration, resolve));
+      }))
+    );
   }
 
   /** มีอนิเมชันวิ่งอยู่ไหม (ใช้ล็อกอินพุตได้) */

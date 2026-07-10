@@ -251,6 +251,11 @@ export class Renderer {
         g.fillRect(px, py, 4, 4);
       }
     }
+
+    // ดาวเคราะห์ไกลๆ ลอยเบลอๆ มุมจอ (นิ่ง — ไกลมากจนแทบไม่ขยับ) ให้ความลึกฉากหลัง
+    this.drawDistantPlanet(g, 452, 66, 34, '#b46cff', '#6c3ab8');
+    this.drawDistantPlanet(g, 56, 452, 24, '#4da8ff', '#2a6ab8');
+
     this.background = bg;
 
     /** ดาวพิกเซล (ตำแหน่งล็อกกับกริด 4px ให้คมแบบ 8-bit) */
@@ -263,6 +268,34 @@ export class Renderer {
         phase: Math.floor(Math.random() * 3),
       });
     }
+
+    /** ฝุ่นอวกาศ: จุดเล็กจางๆ จำนวนมาก ลอยเร็วกว่าดาว (เลเยอร์ใกล้กว่า = พารัลแลกซ์) */
+    this.dust = [];
+    for (let i = 0; i < 40; i++) {
+      this.dust.push({
+        x: Math.random() * L,
+        y: Math.random() * L,
+        size: Math.random() < 0.2 ? 3 : 2,
+        alpha: 0.08 + Math.random() * 0.14,
+      });
+    }
+  }
+
+  /** วาดดาวเคราะห์ไกลๆ แบบง่าย (วงกลมนุ่ม + วงแหวนบาง) ลง context ที่ให้มา */
+  drawDistantPlanet(g, cx, cy, r, colorMain, colorDark) {
+    const grad = g.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+    grad.addColorStop(0, colorMain + '55');
+    grad.addColorStop(1, colorDark + '22');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.fill();
+    // วงแหวนบางเฉียง 20 องศา
+    g.strokeStyle = colorMain + '30';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.ellipse(cx, cy, r * 1.5, r * 0.35, -0.35, 0, Math.PI * 2);
+    g.stroke();
   }
 
   /** เส้นสแกน + ขอบจอมืด ซ้อนทับให้ฟีลจอ CRT */
@@ -333,13 +366,29 @@ export class Renderer {
     ctx.clearRect(-shake.x - 4, -shake.y - 4, L + 8, L + 8);
     ctx.drawImage(this.background, 0, 0);
 
-    // ดาวกะพริบแบบขั้นบันได 3 ระดับ (ฟีลเรโทร ไม่เฟดเนียน)
+    // ฝุ่นอวกาศลอยช้าๆ แนวทแยง (เลเยอร์ใกล้กว่าดาว จึงลอยเร็วกว่าเล็กน้อย — พารัลแลกซ์)
+    const driftDustX = ((time * 0.006) % L + L) % L;
+    const driftDustY = ((time * 0.003) % L + L) % L;
+    for (const d of this.dust) {
+      const x = (d.x + driftDustX) % L;
+      const y = (d.y + driftDustY) % L;
+      ctx.fillStyle = `rgba(255,255,255,${d.alpha})`;
+      ctx.fillRect(Math.floor(x), Math.floor(y), d.size, d.size);
+    }
+
+    // ดาวกะพริบแบบขั้นบันได 3 ระดับ (ฟีลเรโทร ไม่เฟดเนียน) + ลอยช้ากว่าฝุ่น (ไกลกว่า)
+    const driftStarX = ((time * 0.0018) % L + L) % L;
+    const driftStarY = ((time * 0.0009) % L + L) % L;
     const STEPS = [0.25, 0.55, 0.95];
     for (const s of this.stars) {
       const a = STEPS[(Math.floor(time / 300) + s.phase) % 3];
+      const x = (s.x + driftStarX) % L;
+      const y = (s.y + driftStarY) % L;
       ctx.fillStyle = `rgba(255,255,255,${a})`;
-      ctx.fillRect(s.x, s.y, s.size === 8 ? 3 : 2, s.size === 8 ? 3 : 2);
+      ctx.fillRect(x, y, s.size === 8 ? 3 : 2, s.size === 8 ? 3 : 2);
     }
+
+    this.drawShootingStars(time);
 
     board.forEachCell((cell) => {
       if (cell.candy) this.drawCandy(cell, time);
@@ -355,6 +404,41 @@ export class Renderer {
     // CRT ปิดท้ายทับทุกอย่าง (คงที่ ไม่ขยับตามจอสั่น ให้ฟีลกล้องสั่นในตู้ CRT จริง)
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     ctx.drawImage(this.crt, 0, 0);
+  }
+
+  /**
+   * ดาวตก: เส้นแสงวิ่งทแยงจาง ๆ ผ่านจอเป็นระยะๆ (สุ่มแบบ deterministic จาก time)
+   * คำนวณล้วนจาก time ไม่ต้องเก็บ state แยก — เหมือนดาวกะพริบข้างบน
+   */
+  drawShootingStars(time) {
+    const ctx = this.ctx;
+    const paths = [
+      { period: 5200, delay: 0, flight: 650, x0: 40, y0: 20, x1: 280, y1: 180 },
+      { period: 7800, delay: 3100, flight: 550, x0: 480, y0: 50, x1: 300, y1: 210 },
+    ];
+    for (const p of paths) {
+      const phase = (time + p.delay) % p.period;
+      if (phase > p.flight) continue;
+      const k = phase / p.flight;
+      const x = p.x0 + (p.x1 - p.x0) * k;
+      const y = p.y0 + (p.y1 - p.y0) * k;
+      const alpha = k < 0.15 ? k / 0.15 : Math.max(0, 1 - (k - 0.15) / 0.85);
+
+      const dx = p.x1 - p.x0, dy = p.y1 - p.y0;
+      const norm = Math.hypot(dx, dy) || 1;
+      const len = 24;
+      const tx = x - (dx / norm) * len, ty = y - (dy / norm) * len;
+
+      const grad = ctx.createLinearGradient(tx, ty, x, y);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(1, `rgba(255,255,255,${alpha})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
   }
 
   /** วาดพาร์ติเคิลแบบพิกเซล (สี่เหลี่ยมจางลงตามอายุ ไม่เกลี่ยพิกเซล) */
@@ -386,7 +470,7 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
-  /** วาดลูกกวาดจากสไปรต์ (ขยาย 4 เท่า คมกริบ) — ตัวพิเศษมีเฟรมกะพริบ + หายใจเบาๆ + เรืองแสง */
+  /** วาดลูกกวาดจากสไปรต์ (ขยาย 4 เท่า คมกริบ) — ตัวพิเศษมีเฟรมกะพริบ + หายใจเบาๆ + เรืองแสง + บีบ/ยืด */
   drawCandy(cell, time = 0) {
     const C = Renderer.CELL;
     const candy = cell.candy;
@@ -395,13 +479,15 @@ export class Renderer {
     const phase = (cell.col * 340 + cell.row * 260);
     const breathe = 1 + 0.03 * (0.5 + 0.5 * Math.sin((time + phase) / 900));
 
-    const size = (C - Renderer.GAP) * candy.scale * breathe;
-    const px = cell.col * C + C / 2 + candy.offsetX - size / 2;
-    const py = cell.row * C + C / 2 + candy.offsetY - size / 2;
-    if (size <= 0) return;
+    const base = (C - Renderer.GAP) * candy.scale * breathe;
+    const width = base * candy.scaleX;
+    const height = base * candy.scaleY;
+    const px = cell.col * C + C / 2 + candy.offsetX - width / 2;
+    const py = cell.row * C + C / 2 + candy.offsetY - height / 2;
+    if (base <= 0) return;
 
-    // เรืองแสงนุ่มๆ ใต้ลูกกวาด (ใหญ่กว่าตัวเม็ดเล็กน้อย ให้ฟีลเรืองออกมา)
-    const glowSize = size * 1.55;
+    // เรืองแสงนุ่มๆ ใต้ลูกกวาด (ใหญ่กว่าตัวเม็ดเล็กน้อย ให้ฟีลเรืองออกมา ไม่ยืด/บีบตาม)
+    const glowSize = base * 1.55;
     const gx = cell.col * C + C / 2 + candy.offsetX - glowSize / 2;
     const gy = cell.row * C + C / 2 + candy.offsetY - glowSize / 2;
     const glow = candy.special === 'nova' ? this.novaGlow : this.glowSprites[candy.type];
@@ -410,14 +496,14 @@ export class Renderer {
     if (candy.special === 'nova') {
       // โนวา: ดาวเรืองแสงสีหมุนวน 3 เฟรม
       const frame = Math.floor(time / 150) % 3;
-      this.ctx.drawImage(this.novaFrames[frame], px, py, size, size);
+      this.ctx.drawImage(this.novaFrames[frame], px, py, width, height);
       return;
     }
-    this.ctx.drawImage(this.sprites[candy.type], px, py, size, size);
+    this.ctx.drawImage(this.sprites[candy.type], px, py, width, height);
     if (candy.special === 'bomb') {
       // ระเบิด: สีเดิม + แกนไฟเต้นตุบๆ 2 เฟรม
       const frame = Math.floor(time / 250) % 2;
-      this.ctx.drawImage(this.bombOverlays[frame], px, py, size, size);
+      this.ctx.drawImage(this.bombOverlays[frame], px, py, width, height);
     }
   }
 
