@@ -25,3 +25,22 @@ Keep commits focused.
 Gameplay responsiveness has higher priority than visual complexity.
 
 Always follow CURRENT_SPRINT.md.
+
+Development Mode
+
+Default mode is IMPLEMENTATION.
+
+Do not create long documentation.
+
+Do not create design documents unless explicitly requested.
+
+Focus on code.
+
+After each task provide only:
+
+- Summary
+- Files changed
+- Tests performed
+- Next recommended task
+
+Maximum response length: 300 words unless asked otherwise.
