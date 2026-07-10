@@ -23,6 +23,10 @@ export class Renderer {
   static PALETTE = GemArt.PALETTE;
   /** สีเส้นขอบ (ใช้ร่วมกับตัวหนังสือลอย) */
   static OUTLINE = GemArt.OUTLINE;
+  /** สตริงสีดาวกะพริบ 3 ระดับ — คงที่ตลอดชีวิต ไม่ต้องประกอบสตริงใหม่ทุกเฟรม (TASK-003) */
+  static STAR_STYLES = ['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0.95)'];
+  /** ออฟเซ็ตศูนย์ที่ใช้ซ้ำเมื่อไม่มีจอสั่น — เลี่ยงสร้าง object ทุกเฟรม (TASK-003) */
+  static NO_SHAKE = { x: 0, y: 0 };
 
   /**
    * @param {HTMLCanvasElement} canvas
@@ -34,6 +38,7 @@ export class Renderer {
     this.gemArt = new GemArt(Renderer.CELL, Renderer.GAP);
     this.buildBackground();
     this.buildCRTOverlay();
+    this.buildShootingStars();
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -83,16 +88,44 @@ export class Renderer {
       });
     }
 
-    /** ฝุ่นอวกาศ: จุดเล็กจางๆ จำนวนมาก ลอยเร็วกว่าดาว (เลเยอร์ใกล้กว่า = พารัลแลกซ์) */
+    /** ฝุ่นอวกาศ: จุดเล็กจางๆ จำนวนมาก ลอยเร็วกว่าดาว (เลเยอร์ใกล้กว่า = พารัลแลกซ์)
+     *  อัลฟาคงที่ต่อเม็ด → ประกอบสตริงสีครั้งเดียวตรงนี้ ไม่ทำซ้ำทุกเฟรม (TASK-003) */
     this.dust = [];
     for (let i = 0; i < 40; i++) {
+      const alpha = 0.08 + Math.random() * 0.14;
       this.dust.push({
         x: Math.random() * L,
         y: Math.random() * L,
         size: Math.random() < 0.2 ? 3 : 2,
-        alpha: 0.08 + Math.random() * 0.14,
+        style: `rgba(255,255,255,${alpha})`,
       });
     }
+  }
+
+  /**
+   * เตรียมดาวตกล่วงหน้า (TASK-003): gradient + Path2D สร้างครั้งเดียว
+   * เคล็ด: นิยามหางดาวใน "พิกัดท้องถิ่น" (หัวอยู่ที่ 0,0 หางชี้สวนทิศบิน)
+   * ตอนวาดแค่ translate ไปตำแหน่งจริง → gradient เดิมใช้ซ้ำได้ทุกเฟรม
+   * ความจางคุมด้วย globalAlpha (คูณเชิงเส้นกับ gradient 0→1 = ผลเท่าสูตรเดิมเป๊ะ)
+   */
+  buildShootingStars() {
+    const defs = [
+      { period: 5200, delay: 0, flight: 650, x0: 40, y0: 20, x1: 280, y1: 180 },
+      { period: 7800, delay: 3100, flight: 550, x0: 480, y0: 50, x1: 300, y1: 210 },
+    ];
+    const len = 24;
+    this.shootingStars = defs.map((p) => {
+      const dx = p.x1 - p.x0, dy = p.y1 - p.y0;
+      const norm = Math.hypot(dx, dy) || 1;
+      const tx = -(dx / norm) * len, ty = -(dy / norm) * len; // ปลายหางในพิกัดท้องถิ่น
+      const grad = this.ctx.createLinearGradient(tx, ty, 0, 0);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(1, 'rgba(255,255,255,1)');
+      const path = new Path2D();
+      path.moveTo(tx, ty);
+      path.lineTo(0, 0);
+      return { ...p, grad, path };
+    });
   }
 
   /** วาดดาวเคราะห์ไกลๆ แบบง่าย (วงกลมนุ่ม + วงแหวนบาง) ลง context ที่ให้มา */
@@ -174,7 +207,7 @@ export class Renderer {
   draw(board, selected, time, effects = null) {
     const ctx = this.ctx;
     const L = Renderer.LOGICAL;
-    const shake = effects ? effects.shakeOffset : { x: 0, y: 0 };
+    const shake = effects ? effects.shakeOffset : Renderer.NO_SHAKE;
     ctx.setTransform(this.scale, 0, 0, this.scale, shake.x * this.scale, shake.y * this.scale);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(-shake.x - 4, -shake.y - 4, L + 8, L + 8);
@@ -186,19 +219,18 @@ export class Renderer {
     for (const d of this.dust) {
       const x = (d.x + driftDustX) % L;
       const y = (d.y + driftDustY) % L;
-      ctx.fillStyle = `rgba(255,255,255,${d.alpha})`;
+      ctx.fillStyle = d.style; // สตริงสีคงที่ ประกอบไว้ล่วงหน้า (TASK-003)
       ctx.fillRect(Math.floor(x), Math.floor(y), d.size, d.size);
     }
 
     // ดาวกะพริบแบบขั้นบันได 3 ระดับ (ฟีลเรโทร ไม่เฟดเนียน) + ลอยช้ากว่าฝุ่น (ไกลกว่า)
     const driftStarX = ((time * 0.0018) % L + L) % L;
     const driftStarY = ((time * 0.0009) % L + L) % L;
-    const STEPS = [0.25, 0.55, 0.95];
+    const tick = Math.floor(time / 300);
     for (const s of this.stars) {
-      const a = STEPS[(Math.floor(time / 300) + s.phase) % 3];
       const x = (s.x + driftStarX) % L;
       const y = (s.y + driftStarY) % L;
-      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.fillStyle = Renderer.STAR_STYLES[(tick + s.phase) % 3]; // ตารางสตริงคงที่ (TASK-003)
       ctx.fillRect(x, y, s.size === 8 ? 3 : 2, s.size === 8 ? 3 : 2);
     }
 
@@ -223,15 +255,12 @@ export class Renderer {
 
   /**
    * ดาวตก: เส้นแสงวิ่งทแยงจาง ๆ ผ่านจอเป็นระยะๆ (สุ่มแบบ deterministic จาก time)
-   * คำนวณล้วนจาก time ไม่ต้องเก็บ state แยก — เหมือนดาวกะพริบข้างบน
+   * TASK-003: ศูนย์ allocation ต่อเฟรม — gradient/Path2D สร้างครั้งเดียวใน buildShootingStars()
+   * ต่อเฟรมเหลือแค่คณิตล้วน + translate ไปตำแหน่งจริง + คุมความจางด้วย globalAlpha
    */
   drawShootingStars(time) {
     const ctx = this.ctx;
-    const paths = [
-      { period: 5200, delay: 0, flight: 650, x0: 40, y0: 20, x1: 280, y1: 180 },
-      { period: 7800, delay: 3100, flight: 550, x0: 480, y0: 50, x1: 300, y1: 210 },
-    ];
-    for (const p of paths) {
+    for (const p of this.shootingStars) {
       const phase = (time + p.delay) % p.period;
       if (phase > p.flight) continue;
       const k = phase / p.flight;
@@ -239,20 +268,13 @@ export class Renderer {
       const y = p.y0 + (p.y1 - p.y0) * k;
       const alpha = k < 0.15 ? k / 0.15 : Math.max(0, 1 - (k - 0.15) / 0.85);
 
-      const dx = p.x1 - p.x0, dy = p.y1 - p.y0;
-      const norm = Math.hypot(dx, dy) || 1;
-      const len = 24;
-      const tx = x - (dx / norm) * len, ty = y - (dy / norm) * len;
-
-      const grad = ctx.createLinearGradient(tx, ty, x, y);
-      grad.addColorStop(0, 'rgba(255,255,255,0)');
-      grad.addColorStop(1, `rgba(255,255,255,${alpha})`);
-      ctx.strokeStyle = grad;
+      ctx.save();
+      ctx.translate(x, y);            // ย้ายเข้าพิกัดท้องถิ่นที่ gradient ถูกนิยามไว้
+      ctx.globalAlpha = alpha;        // แทน stop สุดท้ายของ gradient เดิม (คูณเชิงเส้นเท่ากัน)
+      ctx.strokeStyle = p.grad;
       ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(tx, ty);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      ctx.stroke(p.path);
+      ctx.restore();
     }
   }
 
