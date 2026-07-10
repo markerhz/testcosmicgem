@@ -1,5 +1,27 @@
 # Changelog
 
+## Sprint 2 Review — TASK-006 — 2026-07-11
+
+- Engineering review ครบ Sprint 2 (TASK-002 → 005) — ผลสรุปใน `docs/SPRINT_REVIEW.md`
+- ผลตรวจ: สถาปัตยกรรม GemArt ทำงานจริง (2 task หลังแตะไฟล์เดียวจบ), เทสต์ 51/51, ศูนย์ allocation ต่อเฟรม
+- พบความเสี่ยง: เวอร์ชันเอกสารไม่ sync (v0.4 / v0.4.1 / v0.5.0-dev), ไม่มี CI, ตัวพิเศษยังใช้สีชุดเก่า
+- คำแนะนำ Sprint 3: version sync + tag v0.5 → special palette sync → gem idle identity → CI
+
+## Sprint 2 / TASK-005: Gem Material Quality — 2026-07-11
+
+### Visual improvements
+- **จานสีแร่ธรรมชาติ** — ลด saturation ทุกสี ดึงเข้าโทนอุ่น คอนทราสต์มาจากช่วงแสง-เงาที่กว้างแทนความสว่างจัด (เลิกฟีลอาร์เคด/พลาสติก)
+- **แสงสม่ำเสมอทั้งเซ็ต** — ทิศแสงบน-ซ้ายร่วมกันทุกเจม, glow ใต้เจมเบาลง (no harsh bloom), แกน Nova เปลี่ยนจากขาวจ้าเป็นโทนแร่
+
+### GemArt improvements
+- **พาสวัสดุกลาง `applyMaterial()`** ใช้ร่วมทุกเจม: ขอบรับแสง (rim light) ฝั่งบน-ซ้าย, เงาสัมผัสเปลือกฝั่งล่าง-ขวา, จุดสะท้อนแสง 2px ตามทิศแสง
+- **เหลี่ยมผลึกภายใน** — dither สองชั้น (สว่าง/มืด) seed ต่างกันต่อชนิด = ลายอสมมาตรไม่ซ้ำกัน ฟีลมือทำ
+- **รอยร้าว** บนเปลือก Ruby Core (เพิ่มจาก Meteor Shard ที่มีอยู่แล้ว)
+
+### Procedural rendering improvements
+- ทุกอย่างยัง procedural + สร้างครั้งเดียวตอน build — ศูนย์ต้นทุนต่อเฟรมเท่าเดิม
+- โครง PROFILES ต่อเจมคงเดิม รองรับ sprite sheet ในอนาคตผ่าน interface เดียวกัน
+
 ## v0.5.0-dev — GemVerse Sprint 1 / TASK 001: Game Feel — 2026-07-10
 
 ### ปรับปรุง (polish เท่านั้น ไม่มีระบบใหม่)
