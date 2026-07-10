@@ -54,6 +54,7 @@ export class Game {
     // ---- Input ----
     this.input = new Input(canvas, this.renderer);
     this.input.onTap = (pos) => this.handleTap(pos);
+    this.input.onSwipe = (from, to) => this.handleSwipe(from, to);
 
     /** @type {import('../board/Cell.js').Cell|null} ช่องที่เลือกอยู่ */
     this.selected = null;
@@ -117,6 +118,8 @@ export class Game {
     if (!this.selected) {
       this.selected = cell;
       this.sfx.select();
+      const C = this.renderer.constructor.CELL;
+      this.effects.burst(cell.col * C + C / 2, cell.row * C + C / 2, '#ffffff', 5);
       return;
     }
     // แตะช่องเดิม → ยกเลิกการเลือก
@@ -133,6 +136,18 @@ export class Game {
     }
     // แตะช่องไกล → ย้ายการเลือกมาช่องใหม่ (spec: ไม่ติดกัน = ไม่สลับ)
     this.selected = cell;
+  }
+
+  /** ผู้เล่นปัดจากช่อง (col,row) ไปทิศติดกัน — สลับทันทีโดยไม่ต้องแตะ 2 ครั้ง */
+  handleSwipe(fromPos, toPos) {
+    this.sfx.ensureCtx();
+    if (this.state !== State.IDLE) return;
+    const from = this.board.getCell(fromPos.col, fromPos.row);
+    const to = this.board.getCell(toPos.col, toPos.row);
+    if (!from || !to || from.isEmpty || to.isEmpty) return;
+
+    this.selected = null; // ปัดตัดการเลือกค้างจากแท็บก่อนหน้าทิ้ง
+    this.swap(from, to);
   }
 
   /**

@@ -197,6 +197,29 @@ export class Renderer {
     }
     this.bombOverlays = [0, 1].map((f) => Renderer.gridToCanvas(Renderer.bombOverlayData(f)));
     this.novaFrames = [0, 1, 2].map((f) => Renderer.gridToCanvas(Renderer.novaData(f)));
+    this.glowSprites = Renderer.PALETTE.map((p) => Renderer.buildGlowSprite(p.m));
+    this.novaGlow = Renderer.buildGlowSprite('#ffffff');
+  }
+
+  /**
+   * เรืองแสงนุ่มๆ (radial gradient สีเดียวกับลูกกวาด) วาดใต้ลูกกวาดแต่ละเม็ด
+   * เพิ่มความ "พรีเมียม" ให้ฟีล modern pixel art ไม่ใช่ retro ล้วนๆ
+   * (ต่างจากสไปรต์ที่คมกริบไม่เกลี่ยพิกเซล — อันนี้ตั้งใจให้เบลอ)
+   * @param {string} color สี hex หลักของลูกกวาดชนิดนั้น
+   * @returns {HTMLCanvasElement}
+   */
+  static buildGlowSprite(color) {
+    const S = 64; // ความละเอียดสูงกว่าสไปรต์ปกติ เพื่อให้ gradient เนียน
+    const c = document.createElement('canvas');
+    c.width = S; c.height = S;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    grad.addColorStop(0, color + 'b0'); // อัลฟา ~69%
+    grad.addColorStop(0.5, color + '30'); // อัลฟา ~19%
+    grad.addColorStop(1, color + '00'); // โปร่งใสสุด
+    g.fillStyle = grad;
+    g.fillRect(0, 0, S, S);
+    return c;
   }
 
   // =====================================================
@@ -361,14 +384,26 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
-  /** วาดลูกกวาดจากสไปรต์ (ขยาย 4 เท่า คมกริบ) — ตัวพิเศษมีเฟรมกะพริบ */
+  /** วาดลูกกวาดจากสไปรต์ (ขยาย 4 เท่า คมกริบ) — ตัวพิเศษมีเฟรมกะพริบ + หายใจเบาๆ + เรืองแสง */
   drawCandy(cell, time = 0) {
     const C = Renderer.CELL;
     const candy = cell.candy;
-    const size = C * candy.scale;
+
+    // หายใจเบาๆ: 1.00 → 1.03 → 1.00 วนลูป เฟสต่างกันตามตำแหน่งช่อง ไม่ให้ทั้งกระดานหายใจพร้อมกัน
+    const phase = (cell.col * 340 + cell.row * 260);
+    const breathe = 1 + 0.03 * (0.5 + 0.5 * Math.sin((time + phase) / 900));
+
+    const size = C * candy.scale * breathe;
     const px = cell.col * C + C / 2 + candy.offsetX - size / 2;
     const py = cell.row * C + C / 2 + candy.offsetY - size / 2;
     if (size <= 0) return;
+
+    // เรืองแสงนุ่มๆ ใต้ลูกกวาด (ใหญ่กว่าตัวเม็ดเล็กน้อย ให้ฟีลเรืองออกมา)
+    const glowSize = size * 1.55;
+    const gx = cell.col * C + C / 2 + candy.offsetX - glowSize / 2;
+    const gy = cell.row * C + C / 2 + candy.offsetY - glowSize / 2;
+    const glow = candy.special === 'nova' ? this.novaGlow : this.glowSprites[candy.type];
+    this.ctx.drawImage(glow, gx, gy, glowSize, glowSize);
 
     if (candy.special === 'nova') {
       // โนวา: ดาวเรืองแสงสีหมุนวน 3 เฟรม
@@ -384,16 +419,22 @@ export class Renderer {
     }
   }
 
-  /** กรอบเลือกแบบพิกเซล: มุมหนา 4 มุม กะพริบเป็นจังหวะ */
+  /** กรอบเลือก: เรืองแสงพัลส์นุ่มๆ (แทนการกะพริบ on/off แข็งๆ แบบเดิม) + มุมพิกเซล 4 มุม */
   drawSelection(cell, time) {
-    if (Math.floor(time / 250) % 2 === 1) return; // กะพริบแบบ on/off
     const ctx = this.ctx;
     const C = Renderer.CELL;
     const x = cell.col * C, y = cell.row * C;
-    const t = 4;  // ความหนาเส้น
-    const len = 18; // ความยาวมุม
+
+    // เรืองแสงพัลส์: อัลฟาไล่ขึ้นลงนุ่มๆ แทนการกะพริบ ให้ "เด่นทันที" แต่ไม่กระตุก
+    const pulse = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(time / 260));
+    const glowSize = C * 1.7;
+    ctx.globalAlpha = pulse;
+    ctx.drawImage(this.novaGlow, x + C / 2 - glowSize / 2, y + C / 2 - glowSize / 2, glowSize, glowSize);
+    ctx.globalAlpha = 1;
+
+    // มุมพิกเซลหนา 4 มุม เรืองสว่างคงที่ (ไม่กะพริบ) ให้อ่านตำแหน่งได้ชัดเจนตลอด
+    const t = 4, len = 18;
     ctx.fillStyle = '#ffffff';
-    // มุมบนซ้าย / บนขวา / ล่างซ้าย / ล่างขวา
     ctx.fillRect(x + 2, y + 2, len, t); ctx.fillRect(x + 2, y + 2, t, len);
     ctx.fillRect(x + C - 2 - len, y + 2, len, t); ctx.fillRect(x + C - 2 - t, y + 2, t, len);
     ctx.fillRect(x + 2, y + C - 2 - t, len, t); ctx.fillRect(x + 2, y + C - 2 - len, t, len);
