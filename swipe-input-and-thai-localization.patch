@@ -1,0 +1,147 @@
+diff --git a/index.html b/index.html
+index 0bfc253..4e0252a 100644
+--- a/index.html
++++ b/index.html
+@@ -4,7 +4,7 @@
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+ <meta name="theme-color" content="#0b1020">
+-<title>SweetVerse Cosmic v0.2.4 Alpha</title>
++<title>สวีทเวิร์ส คอสมิก v0.3.0 Alpha</title>
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+@@ -13,15 +13,15 @@
+ <body>
+ <div id="app">
+   <header>
+-    <h1>🌌 SweetVerse Cosmic <small>v0.2.4 Alpha</small></h1>
++    <h1>🌌 SweetVerse Cosmic <small>v0.3.0 Alpha</small></h1>
+   </header>
+   <div id="hud">
+-    <div class="hud-box"><span class="hud-label">SCORE</span><span id="score" class="hud-value">0</span></div>
+-    <div class="hud-box"><span class="hud-label">MULT</span><span id="mult" class="hud-value">x1.0</span></div>
++    <div class="hud-box"><span class="hud-label">คะแนน</span><span id="score" class="hud-value">0</span></div>
++    <div class="hud-box"><span class="hud-label">ทวีคูณ</span><span id="mult" class="hud-value">x1.0</span></div>
+     <button id="mute" class="hud-box hud-btn" aria-label="เปิด/ปิดเสียง">🔊</button>
+   </div>
+   <canvas id="game"></canvas>
+-  <p id="hint">แตะ 2 ช่องติดกันเพื่อสลับ • เรียง 4 = 💣 ระเบิด 3x3 • เรียง 5 = 🌟 โนวาล้างทั้งสี • แตะ 🔊 เพื่อปิดเสียง</p>
++  <p id="hint">ปัด/แตะ 2 ช่องติดกันเพื่อสลับ • เรียง 4 = 💣 ระเบิด 3x3 • เรียง 5 = 🌟 โนวาล้างทั้งสี • แตะ 🔊 เพื่อปิดเสียง</p>
+ </div>
+ <script type="module" src="js/main.js"></script>
+ </body>
+diff --git a/js/engine/Game.js b/js/engine/Game.js
+index 5795387..7c15ad0 100644
+--- a/js/engine/Game.js
++++ b/js/engine/Game.js
+@@ -54,6 +54,7 @@ export class Game {
+     // ---- Input ----
+     this.input = new Input(canvas, this.renderer);
+     this.input.onTap = (pos) => this.handleTap(pos);
++    this.input.onSwipe = (from, to) => this.handleSwipe(from, to);
+ 
+     /** @type {import('../board/Cell.js').Cell|null} ช่องที่เลือกอยู่ */
+     this.selected = null;
+@@ -135,6 +136,18 @@ export class Game {
+     this.selected = cell;
+   }
+ 
++  /** ผู้เล่นปัดจากช่อง (col,row) ไปทิศติดกัน — สลับทันทีโดยไม่ต้องแตะ 2 ครั้ง */
++  handleSwipe(fromPos, toPos) {
++    this.sfx.ensureCtx();
++    if (this.state !== State.IDLE) return;
++    const from = this.board.getCell(fromPos.col, fromPos.row);
++    const to = this.board.getCell(toPos.col, toPos.row);
++    if (!from || !to || from.isEmpty || to.isEmpty) return;
++
++    this.selected = null; // ปัดตัดการเลือกค้างจากแท็บก่อนหน้าทิ้ง
++    this.swap(from, to);
++  }
++
+   /**
+    * สลับลูกกวาด 2 ช่องพร้อมอนิเมชัน
+    * โนวา → ล้างสีทันที | มี match → resolve cascade | ไม่มี → สลับกลับ
+diff --git a/js/engine/Input.js b/js/engine/Input.js
+index fa73b8b..91b6728 100644
+--- a/js/engine/Input.js
++++ b/js/engine/Input.js
+@@ -1,8 +1,15 @@
+ /**
+  * Input — แปลง pointer event (เมาส์/ทัช) เป็นพิกัดช่องบนกระดาน
+- * ไม่รู้กติกาเกม แค่บอกว่า "ผู้เล่นแตะช่องไหน" ผ่าน callback
++ * ไม่รู้กติกาเกม แค่บอกว่า "ผู้เล่นแตะช่องไหน" หรือ "ปัดจากช่องไหนไปช่องไหน" ผ่าน callback
++ *
++ * รองรับทั้ง 2 แบบ:
++ *   - แตะ (tap): กดปล่อยโดยไม่ลากเกินระยะ threshold → onTap(pos)
++ *   - ปัด (swipe): ลากเกิน threshold ในทิศ ซ้าย/ขวา/บน/ล่าง → onSwipe(from, to)
+  */
+ export class Input {
++  /** ระยะลาก (px หน้าจอจริง) ขั้นต่ำก่อนนับเป็นการปัด ไม่ใช่แตะ */
++  static SWIPE_THRESHOLD = 28;
++
+   /**
+    * @param {HTMLCanvasElement} canvas
+    * @param {import('./Renderer.js').Renderer} renderer ใช้แปลงพิกัดหน้าจอ → ช่อง
+@@ -13,14 +20,57 @@ export class Input {
+ 
+     /** @type {(pos: {col:number,row:number}) => void} ตั้งค่าโดย Game */
+     this.onTap = null;
++    /** @type {(from: {col:number,row:number}, to: {col:number,row:number}) => void} ตั้งค่าโดย Game */
++    this.onSwipe = null;
++
++    /** ตำแหน่งเริ่มลาก (null = ไม่มีการกดค้าง) */
++    this.startClient = null;
++    this.startPos = null;
++    this.swiped = false;
+ 
+-    canvas.addEventListener('pointerdown', (e) => this.handlePointer(e));
++    canvas.addEventListener('pointerdown', (e) => this.handleDown(e));
++    canvas.addEventListener('pointermove', (e) => this.handleMove(e));
++    canvas.addEventListener('pointerup', (e) => this.handleUp(e));
++    canvas.addEventListener('pointercancel', () => this.reset());
++    canvas.addEventListener('pointerleave', (e) => this.handleUp(e));
+   }
+ 
+-  handlePointer(e) {
++  handleDown(e) {
+     e.preventDefault();
+-    if (!this.onTap) return;
+     const pos = this.renderer.screenToBoard(e.clientX, e.clientY);
+-    if (pos) this.onTap(pos);
++    if (!pos) return;
++    this.startClient = { x: e.clientX, y: e.clientY };
++    this.startPos = pos;
++    this.swiped = false;
++  }
++
++  handleMove(e) {
++    if (!this.startClient || this.swiped) return;
++    const dx = e.clientX - this.startClient.x;
++    const dy = e.clientY - this.startClient.y;
++    if (Math.max(Math.abs(dx), Math.abs(dy)) < Input.SWIPE_THRESHOLD) return;
++
++    // ลากเกิน threshold แล้ว → หาทิศทางหลัก (ซ้าย/ขวา/บน/ล่าง) แล้วยิง onSwipe ทันที
++    let dCol = 0, dRow = 0;
++    if (Math.abs(dx) > Math.abs(dy)) dCol = dx > 0 ? 1 : -1;
++    else dRow = dy > 0 ? 1 : -1;
++
++    const to = { col: this.startPos.col + dCol, row: this.startPos.row + dRow };
++    if (to.col >= 0 && to.col <= 7 && to.row >= 0 && to.row <= 7) {
++      this.swiped = true;
++      if (this.onSwipe) this.onSwipe(this.startPos, to);
++    }
++  }
++
++  handleUp(e) {
++    if (!this.startClient) return;
++    if (!this.swiped && this.onTap) this.onTap(this.startPos);
++    this.reset();
++  }
++
++  reset() {
++    this.startClient = null;
++    this.startPos = null;
++    this.swiped = false;
+   }
+ }
