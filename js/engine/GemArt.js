@@ -13,17 +13,21 @@ export class GemArt {
   /** ขนาดสไปรต์พิกเซล (16x16 ขยาย 4 เท่า = 64) */
   static SPRITE = 16;
 
-  /** จานสี 8-bit ต่อชนิด: m=หลัก l=อ่อน d=เข้ม s=รอง */
+  /**
+   * จานสีแร่ธรรมชาติ (TASK-005): ลดความจัดจ้าน อุ่นขึ้น คุมโทนเดียวกันทั้งเซ็ต
+   * m=เนื้อหลัก l=รับแสง d=ในเงา s=แกน/ไฮไลต์ — ทุกสีถูกดึงเข้าหาโทนอุ่นเล็กน้อย
+   * คอนทราสต์มาจากช่วง l↔d ที่กว้าง ไม่ใช่ความสว่างจัด (เลี่ยงฟีลพลาสติก/อาร์เคด)
+   */
   static PALETTE = [
-    { m: '#e8404f', l: '#ff8090', d: '#9c2033', s: '#ffe0b0' }, // 0 ดาวเคราะห์วงแหวน
-    { m: '#ffd84d', l: '#fff0a0', d: '#b8912a', s: '#ffffff' }, // 1 ดาวประกาย
-    { m: '#4fe87f', l: '#a0ffc0', d: '#2a9c50', s: '#eafff2' }, // 2 คริสตัล
-    { m: '#4da8ff', l: '#a0d8ff', d: '#2a6ab8', s: '#f0f8ff' }, // 3 จันทร์เสี้ยว
-    { m: '#b46cff', l: '#d9b3ff', d: '#6c3ab8', s: '#ffffff' }, // 4 วงโคจร
-    { m: '#ff6b1a', l: '#ff9e5e', d: '#a63e00', s: '#fff2e0' }, // 5 ดาวหาง (ส้มเข้ม ไม่กลืนกับเหลือง)
+    { m: '#c4505c', l: '#e28a8e', d: '#7c3040', s: '#f2cfae' }, // 0 Ruby Core — ทับทิมอมดินอุ่น
+    { m: '#d4b154', l: '#ecd598', d: '#8f7330', s: '#f8f1da' }, // 1 Nova Crystal — โทแพซทองหม่น
+    { m: '#5aad76', l: '#98cfaa', d: '#2f6e4b', s: '#dbeee2' }, // 2 Emerald Pulse — มรกตขุ่นธรรมชาติ
+    { m: '#5d8fbe', l: '#98bcdc', d: '#365d88', s: '#e0ecf7' }, // 3 Meteor Shard — น้ำแข็งเทาฟ้าเย็น
+    { m: '#9873b8', l: '#c0a4d8', d: '#634683', s: '#ece2f5' }, // 4 Nebula Prism — แอเมทิสต์ควันหม่น
+    { m: '#cd8039', l: '#e6a869', d: '#8b511d', s: '#f4e2c4' }, // 5 Solar Core — แอมเบอร์อุ่นลึก
   ];
-  /** สีเส้นขอบสไปรต์ (ดำอมม่วงแบบ Balatro) */
-  static OUTLINE = '#1a1030';
+  /** สีเส้นขอบสไปรต์ (ดำอมม่วงอุ่น) */
+  static OUTLINE = '#221728';
 
   /**
    * @param {number} cellSize ขนาดช่อง (px logical) — Renderer ส่งมา
@@ -54,6 +58,10 @@ export class GemArt {
       },
       detail(grid, P) {
         GemArt.paintCore(grid, 7.5, 8, 1.9, P.s, P.l); // แกนหลอมร้อนค่อนล่าง
+        // รอยร้าวบนเปลือกหิน (ผลึกหนักผ่านอะไรมาเยอะ)
+        for (const [cx, cy] of [[4, 4], [5, 5], [11, 10], [10, 11]]) {
+          if (grid[cy] && grid[cy][cx] && grid[cy][cx] !== GemArt.OUTLINE) grid[cy][cx] = P.d;
+        }
       },
     },
     { // 1 — Nova Crystal: ผลึกดาวแฉกแผ่รังสี แกนกลางสว่างจ้า
@@ -63,7 +71,7 @@ export class GemArt {
         return { in: m <= 9.5, edge: m > 7.6 };
       },
       detail(grid, P) {
-        GemArt.paintCore(grid, 7.5, 7.5, 1.6, '#ffffff', P.s);
+        GemArt.paintCore(grid, 7.5, 7.5, 1.6, P.s, P.l); // แกนสว่างแบบแร่ ไม่ใช่ไฟขาวจ้า (no harsh bloom)
       },
     },
     { // 2 — Emerald Pulse: ผลึกธรรมชาติทรงสูง งอกเบี้ยวข้างซ้าย + เส้นแร่กลางลำ
@@ -135,6 +143,47 @@ export class GemArt {
     },
   ];
 
+  /**
+   * พาสวัสดุกลาง (TASK-005) — ใช้ร่วมทุกเจมให้ "เป็นแร่จากจักรวาลเดียวกัน"
+   * ลำดับ: ขอบรับแสง → เงาสัมผัส → เหลี่ยมผลึก dither → จุดสะท้อน
+   * ทิศแสงร่วม: บน-ซ้าย เสมอ | seed ต่อชนิด = ลาย dither อสมมาตรไม่ซ้ำกัน (ฟีลมือทำ)
+   * @param {(string|null)[][]} grid
+   * @param {{m:string,l:string,d:string,s:string}} P
+   * @param {number} seed
+   */
+  static applyMaterial(grid, P, seed) {
+    const S = GemArt.SPRITE;
+    const O = GemArt.OUTLINE;
+    const isBody = (y, x) => y >= 0 && y < S && x >= 0 && x < S && grid[y][x] !== null && grid[y][x] !== O;
+    const isEdge = (y, x) => y < 0 || y >= S || x < 0 || x >= S || grid[y][x] === O || grid[y][x] === null;
+
+    // เก็บผลไว้ก่อนค่อยเขียน — กัน pass อ่านค่าที่เพิ่งแก้ของตัวเอง
+    const writes = [];
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        if (!isBody(y, x)) continue;
+        const touchTL = isEdge(y - 1, x) || isEdge(y, x - 1); // ชิดเปลือกฝั่งรับแสง
+        const touchBR = isEdge(y + 1, x) || isEdge(y, x + 1); // ชิดเปลือกฝั่งเงา
+        if (touchTL && !touchBR) { writes.push([y, x, P.l]); continue; }  // ขอบรับแสง (rim light)
+        if (touchBR && !touchTL) { writes.push([y, x, P.d]); continue; }  // เงาสัมผัสเปลือก
+        // เหลี่ยมผลึกภายใน: dither ประปรายสองชั้น สว่าง/มืด — ให้ความลึกในเนื้อแร่
+        if ((x * 3 + y * 5 + seed) % 11 === 0) writes.push([y, x, P.l]);
+        else if ((x * 5 + y * 7 + seed) % 13 === 0) writes.push([y, x, P.d]);
+      }
+    }
+    for (const [y, x, c] of writes) grid[y][x] = c;
+
+    // จุดสะท้อนแสง 2 พิกเซล: หาเนื้อเจมจุดที่ "บนซ้ายสุด" ตามทิศแสงร่วม
+    let best = null, bestV = Infinity;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      if (isBody(y, x) && !isEdge(y, x + 1) && x + y < bestV) { bestV = x + y; best = { x, y }; }
+    }
+    if (best) {
+      grid[best.y][best.x] = P.s;
+      if (isBody(best.y, best.x + 1)) grid[best.y][best.x + 1] = P.s;
+    }
+  }
+
   /** ตัวช่วยกลาง: ระบายแกนกลม (สีในสุด + วงรอบ) เฉพาะบนเนื้อเจม — ใช้ร่วมทุกโปรไฟล์ */
   static paintCore(grid, cx, cy, r, colInner, colOuter) {
     const S = GemArt.SPRITE;
@@ -172,6 +221,7 @@ export class GemArt {
         grid[y][x] = (dx + dy < -2.5) ? P.l : (dx + dy > 3.5 ? P.d : P.m);
       }
     }
+    GemArt.applyMaterial(grid, P, type * 17); // พาสวัสดุร่วม (TASK-005) — ก่อนลายเฉพาะตัว
     if (prof.detail) prof.detail(grid, P);
     return grid;
   }
@@ -255,8 +305,8 @@ export class GemArt {
     c.width = S; c.height = S;
     const g = c.getContext('2d');
     const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
-    grad.addColorStop(0, color + 'b0');
-    grad.addColorStop(0.5, color + '30');
+    grad.addColorStop(0, color + '86');  // เบาลงจากเดิม (TASK-005: no harsh bloom)
+    grad.addColorStop(0.5, color + '22');
     grad.addColorStop(1, color + '00');
     g.fillStyle = grad;
     g.fillRect(0, 0, S, S);

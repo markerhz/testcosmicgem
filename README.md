@@ -1,92 +1,77 @@
-# 🌌 SweetVerse Cosmic
+# 💎 GemVerse
 
-เกม Match-3 กึ่งแอคชั่นตีมลูกกวาดอวกาศ — HTML5 Canvas ล้วน ไม่ใช้เฟรมเวิร์ก ไม่ใช้ไลบรารี
+Modern Indie Match-3 Roguelite — HTML5 Canvas ล้วน ไม่ใช้เฟรมเวิร์ก ไม่ใช้ไลบรารี
 
-**เวอร์ชันปัจจุบัน: v0.4.1 Alpha** — match, cascade, คะแนน chips × mult, 💣 ระเบิด, 🌟 ซูเปอร์โนวา,
-ปัดสลับ (swipe), HUD ใหม่, พื้นหลังพารัลแลกซ์, อนิเมชัน squash & stretch + landing bounce, ครบทุกข้อใน
-**TOP PRIORITIES** ของ Master Development Document (① - ⑧) แล้ว บนสถาปัตยกรรมเอนจินที่วางไว้ใน v0.2.0
-รองรับการพัฒนาต่อยาวๆ จนเป็นเกมอินดี้เต็มรูปแบบ
+GemVerse ไม่ใช่ Candy Crush อีกเกม — มันคือ **Tiny Living Universe**:
+กระดานคือเครื่องขุดคริสตัล UI คือแผงควบคุมยานอวกาศ ทุกอย่างต้องรู้สึกมีชีวิต
 
-## 🚀 วิธีรัน
+## 📌 สถานะการพัฒนา
 
-โปรเจกต์ใช้ ES Modules จึงต้องรันผ่านเว็บเซิร์ฟเวอร์ (เปิดไฟล์ตรงๆ ไม่ได้):
+**Sprint 2 ปิดแล้ว** — เป้าหมายถัดไป: **Version 0.5**
 
-```bash
-# วิธีที่ 1: Python
-python3 -m http.server 8000
+Sprint 2 ส่งมอบ: สถาปัตยกรรม GemArt (แยกอาร์ตจากเอนจิน), เจม 6 ทรงเอกลักษณ์,
+วัสดุแร่ธรรมชาติ, ศูนย์ allocation ต่อเฟรม — ดู `docs/SPRINT_REVIEW.md`
 
-# วิธีที่ 2: Node
-npx serve .
-```
+## ✨ ฟีเจอร์ที่มีแล้ว
 
-แล้วเปิด `http://localhost:8000`
+- Match-3 ครบวงจร: swap (แตะ/ปัด), match, gravity, cascade, สลับกลับเมื่อพลาด, กันเกมตัน
+- คะแนนแบบ chips × mult — คอมโบต่อเนื่องดันตัวคูณ
+- เจมพิเศษ: เรียง 4 = 💣 ระเบิด 3x3 (ลูกโซ่ได้), เรียง 5 = 🌟 โนวาล้างทั้งสี
+- Game feel: hit-stop, pop 2 จังหวะ, fall ตามระยะจริง, จอสั่น, พาร์ติเคิล, เสียง WebAudio สังเคราะห์
+- **เจม 6 ชนิด ทรงเอกลักษณ์** (Ruby Core, Nova Crystal, Emerald Pulse, Meteor Shard, Nebula Prism, Solar Core) วัสดุแร่ procedural — จำได้จาก silhouette โดยไม่พึ่งสี
+- พื้นหลังจักรวาลพารัลแลกซ์ + CRT overlay, 60 FPS บนมือถือ (ศูนย์ allocation ต่อเฟรม)
 
-หรือเปิดผ่าน **GitHub Pages**: Settings → Pages → Deploy from branch → main
-
-## 📁 โครงสร้างโปรเจกต์
+## 📁 โครงสร้าง repository
 
 ```
-SweetVerseCosmic/
-├── index.html
-├── css/style.css          # 8-bit + CRT + HUD พาเนลมนโปร่งแสง, ฟอนต์ Press Start 2P (อังกฤษ/ตัวเลข) + Chakra Petch (ไทย)
+testcosmicgem/
+├── index.html / css/style.css
 ├── js/
 │   ├── main.js            # จุดเริ่มต้น
 │   ├── engine/
-│   │   ├── Game.js        # หัวใจเกม: state, ลูปหลัก, เชื่อมทุกส่วน
-│   │   ├── Renderer.js    # งานวาดทั้งหมด (canvas, retina, mobile resize, พื้นหลังพารัลแลกซ์)
-│   │   ├── Input.js       # pointer → พิกัดช่องบนกระดาน + ตรวจจับปัด (swipe) 4 ทิศ
-│   │   ├── Animation.js   # ตัวจัดการ tween กลาง (Promise-based) + easing + squash/stretch bump
-│   │   ├── Effects.js     # พาร์ติเคิล, เลขคะแนนลอย, จอสั่น (ข้อมูลล้วน ไม่แตะ canvas)
-│   │   └── Sfx.js         # เสียงสังเคราะห์ WebAudio (ไม่มีไฟล์เสียง)
-│   ├── board/
-│   │   ├── Board.js       # กระดาน 8x8 (ข้อมูลล้วน)
-│   │   ├── Cell.js        # ช่อง 1 ช่อง
-│   │   └── Candy.js       # ลูกกวาด 1 เม็ด (6 ชนิด) + scale/scaleX/scaleY สำหรับอนิเมชัน
-│   └── systems/           # กติกาเกม — implement ครบแล้ว
-│       ├── MatchSystem.js    # หา match + วางแผนตัวพิเศษ + ขยายระเบิด/โนวา
-│       ├── GravitySystem.js  # แรงโน้มถ่วง + เติมใหม่
-│       ├── ScoreSystem.js    # chips × mult
-│       └── SaveSystem.js     # โครงไว้ก่อน รอ v0.6.0
-├── assets/                # sprites / audio / fonts / effects (ยังว่าง — สไปรต์สร้างด้วยโค้ดล้วน)
-└── docs/                  # ROADMAP, GDD, CHANGELOG
+│   │   ├── Game.js        # state machine + ลูปหลัก + เชื่อมทุกระบบ
+│   │   ├── Renderer.js    # จัดฉาก/เฟรม (ไม่รู้วิธีวาดเจม)
+│   │   ├── GemArt.js      # 🎨 งานอาร์ตเจมทั้งหมด — ศิลปินแก้ไฟล์นี้ไฟล์เดียว
+│   │   ├── Input.js       # แตะ/ปัด → พิกัดช่อง
+│   │   ├── Animation.js   # tween กลาง (Promise-based, รองรับ delay)
+│   │   ├── Effects.js     # พาร์ติเคิล/เลขลอย/จอสั่น (ข้อมูลล้วน)
+│   │   └── Sfx.js         # เสียงสังเคราะห์ WebAudio
+│   ├── board/             # Board / Cell / Candy (ข้อมูลล้วน)
+│   └── systems/           # Match / Gravity / Score / Save (กติกา)
+├── tests/test.js          # 51 เทสต์ ไม่แตะ DOM
+└── docs/                  # BIBLE, SPRINT, CHANGELOG, ART_REVIEW, KNOWN_ISSUES ฯลฯ
 ```
 
-**หลักการแยกความรับผิดชอบ:** Board ไม่รู้เรื่องการวาด, Renderer ไม่รู้กติกา,
-Input ไม่รู้ลอจิก — ทุกอย่างเชื่อมกันที่ `Game.js` ที่เดียว ไม่มีตัวแปร global
+สถาปัตยกรรมหลัก: **Gameplay ↮ Rendering แยกขาด** | Renderer → GemArt → Gem Drawing
+เปลี่ยนงานศิลป์ (รวม sprite sheet ในอนาคต) โดยไม่แตะโค้ดเกม
 
-## ✨ ฟีเจอร์ปัจจุบัน (v0.4.1 Alpha)
+## 🚀 Build / Run
 
-**แกนเกม**
-- Canvas engine 60 FPS, ปรับขนาดตามจอมือถือ + คมชัดบน retina
-- กระดาน 8x8 สุ่มลูกกวาด 6 ชนิด แบบไม่มี match ตั้งต้น
-- **Match 3+ / Gravity / Cascade** ครบ พร้อมอนิเมชันแตก-หล่น-เติม
-- **คะแนนแบบ Balatro**: chips × mult — คอมโบต่อเนื่องดันตัวคูณ
-- **ลูกกวาดพิเศษ**: เรียง 4 = 💣 ระเบิด 3x3 (ลูกโซ่ได้) / เรียง 5 = 🌟 โนวาล้างทั้งสี (โนวาคู่ = ล้างทั้งกระดาน)
-- **กันเกมตัน**: ไม่เหลือตาเดิน = สับกระดานใหม่อัตโนมัติ
+ไม่มีขั้น build — ES Modules ต้องรันผ่านเว็บเซิร์ฟเวอร์:
 
-**อินพุต & ควบคุม (① Swipe)**
-- ปัด (swipe) 4 ทิศเพื่อสลับทันที (threshold 28px) หรือแตะเลือก→แตะช่องติดกันแบบเดิมก็ได้ทั้งคู่
+```bash
+python3 -m http.server 8000   # หรือ npx serve .
+```
 
-**Game Feel & Polish (② ③ ⑦ ⑧)**
-- ลูกกวาดหายใจเบาๆ (scale 1.00→1.03→1.00 วนลูป) + เรืองแสงนุ่มๆ ใต้แต่ละเม็ด
-- ฟีดแบ็กเลือกช่อง: แสงเรืองพัลส์นุ่มนวล + ประกายกระจายตอนเลือก (แทนกะพริบ on/off แบบเดิม)
-- สลับลูกกวาดแบบ ease-in-out + squash & stretch ตามแนวเคลื่อนที่
-- ลูกกวาดหล่นแล้ว **เด้งตอนจอด** (landing bounce overshoot)
-- **เอฟเฟกต์**: พาร์ติเคิลระเบิดสีตอนแตก, เลขคะแนนลอยขึ้น, จอสั่นตามความแรงคอมโบ/ระเบิด/โนวา
-- **เสียง**: สังเคราะห์ด้วย WebAudio ล้วน (ไม่มีไฟล์เสียง) ครบทุกจังหวะเกม + ปุ่มปิด/เปิดเสียง
+เปิด `http://localhost:8000` — หรือใช้ GitHub Pages ได้ทันที
 
-**UI/UX (④ ⑤ ⑥)**
-- **HUD ใหม่**: กลุ่มพาเนลมนโปร่งแสง + ไอคอน ⭐🔥 + ลดความสูงให้พื้นที่เล่นกว้างขึ้น
-- เพิ่มระยะห่างระหว่างลูกกวาด ~4px อ่านกระดานง่ายขึ้น
-- **พื้นหลัง**: ดาว+ฝุ่นอวกาศลอยช้าๆ แบบพารัลแลกซ์, ดาวเคราะห์ไกลๆ, ดาวตกวิ่งผ่านจอเป็นระยะ
-- **ภาษาไทยเต็มรูปแบบ**: UI ทั้งหมดเป็นไทย ใช้ฟอนต์ Chakra Petch สำหรับข้อความไทย (Press Start 2P ไม่มีตัวอักษรไทย จึงใช้เฉพาะตัวเลข/อังกฤษ)
+ทดสอบ: `npm test` (Node ล้วน ไม่ต้องมีเบราว์เซอร์)
 
-**คุณภาพโค้ด**
-- ชุดเทสต์ลอจิก: `npm test` (43 เทสต์ ผ่านหมด)
+## 🔁 Development workflow
 
-## 🗺️ แผนต่อไป
+1. อ่าน `CLAUDE.md` + `docs/CURRENT_SPRINT.md` ก่อนเริ่มทุก task
+2. หนึ่ง task = หนึ่งเรื่อง = commit เล็ก — ไม่แตะไฟล์นอกขอบเขต
+3. รัน `npm test` ก่อน commit เสมอ (51 เทสต์ต้องผ่าน)
+4. งานอาร์ตแก้ที่ `GemArt.js` เท่านั้น / ห้าม redesign เกมหรือสถาปัตยกรรมโดยไม่ได้รับมอบหมาย
+5. จบ task: อัปเดต `docs/CHANGELOG.md` แล้วรายงาน Summary / Files / Tests / Next
 
-ดูรายละเอียดใน [docs/ROADMAP.md](docs/ROADMAP.md) และแนวคิดเกมใน [docs/GDD.md](docs/GDD.md)
+## 🗺️ Roadmap ปัจจุบัน
 
-ครบทุกข้อใน TOP PRIORITIES ของ Master Development Document แล้ว ต่อไปคือ Milestone 3 ตามโรดแมป:
-**ระบบ Cosmic Crew** (แทน Joker แบบ Balatro) → เซฟเกม → ออนไลน์ → แอพ Android
+- **v0.5** (ถัดไป) — Sprint 3: special gem palette sync, gem idle identity, CI, เก็บ technical debt
+- v0.6 — Tiny Universe Foundation
+- v0.7 — Crew Framework
+- v0.8 — Ship Modules
+- v0.9 — Galaxy Expedition
+- v1.0 — Public Demo
+
+ข้อจำกัดที่รู้อยู่: `docs/KNOWN_ISSUES.md`

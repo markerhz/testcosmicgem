@@ -1,5 +1,17 @@
 # Changelog
 
+## 🏁 Sprint 2 Closed — TASK-007 — 2026-07-11
+
+สรุปทั้งหมดที่ส่งมอบใน Sprint 2 (เป้าหมาย: Modern Pixel Art Foundation):
+
+- **TASK-002** — แยกงานอาร์ตเจมออกจาก Renderer เป็นโมดูล `GemArt.js` (Renderer → GemArt → Gem Drawing) พิสูจน์ pixel-identical 100%
+- **TASK-003** — ศูนย์ allocation ต่อเฟรมใน Renderer (gradient/Path2D/สตริงสี prebuild หมด)
+- **TASK-004** — เจม 6 ทรงเอกลักษณ์ผ่าน rendering profile ต่อเจม: Ruby Core, Nova Crystal, Emerald Pulse, Meteor Shard, Nebula Prism, Solar Core
+- **TASK-005** — วัสดุแร่ธรรมชาติ: จานสีลด saturation โทนอุ่น, พาสวัสดุกลาง (rim light / contact shadow / facet dither / specular), รอยร้าว, glow เบาลง
+- **TASK-006** — Engineering review + `docs/SPRINT_REVIEW.md`
+- **TASK-007** — ปิดสปรินต์: README ใหม่ (GemVerse), CURRENT_SPRINT → Sprint 3 (target v0.5), `docs/KNOWN_ISSUES.md`
+- เทสต์ 47 → 51 ข้อ ผ่านตลอด / เกมเพลย์ไม่ถูกแตะทั้งสปรินต์
+
 ## Sprint 2 Review — TASK-006 — 2026-07-11
 
 - Engineering review ครบ Sprint 2 (TASK-002 → 005) — ผลสรุปใน `docs/SPRINT_REVIEW.md`
