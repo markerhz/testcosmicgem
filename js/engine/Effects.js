@@ -13,7 +13,7 @@ export class Effects {
   constructor() {
     /** @type {Array<{x:number,y:number,vx:number,vy:number,life:number,maxLife:number,color:string,size:number}>} */
     this.particles = [];
-    /** @type {Array<{x:number,y:number,vy:number,life:number,maxLife:number,text:string,color:string}>} */
+    /** @type {Array<{x:number,y:number,vy:number,life:number,maxLife:number,text:string,color:string,big:boolean}>} */
     this.floaters = [];
 
     this.shakeTime = 0;     // เวลาที่เหลือของการสั่น (ms)
@@ -28,20 +28,21 @@ export class Effects {
    * @param {string} color
    * @param {number} count จำนวนพาร์ติเคิล
    * @param {() => number} [rng] ใส่เองได้เพื่อเทสต์
+   * @param {number} [power] ตัวคูณความแรง (ความเร็ว/ขนาด) — คอมโบสูง/ตัวพิเศษส่งค่า > 1
    */
-  burst(x, y, color, count = 8, rng = Math.random) {
+  burst(x, y, color, count = 8, rng = Math.random, power = 1) {
     for (let i = 0; i < count; i++) {
       const angle = rng() * Math.PI * 2;
-      const speed = 60 + rng() * 120;
+      const speed = (60 + rng() * 120) * power;
       const maxLife = 260 + rng() * 220;
       this.particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 40, // เหวี่ยงขึ้นเล็กน้อยก่อนตกตามแรงโน้มถ่วง
+        vy: Math.sin(angle) * speed - 40 * power, // เหวี่ยงขึ้นเล็กน้อยก่อนตกตามแรงโน้มถ่วง
         life: maxLife,
         maxLife,
         color,
-        size: rng() < 0.3 ? 4 : 2,
+        size: rng() < (power > 1.3 ? 0.5 : 0.3) ? 4 : 2,
       });
     }
   }
@@ -52,9 +53,10 @@ export class Effects {
    * @param {number} y
    * @param {string} text เช่น "+80"
    * @param {string} [color]
+   * @param {boolean} [big] ตัวใหญ่ (ใช้กับข้อความ COMBO / คะแนนก้อนโต)
    */
-  floatText(x, y, text, color = '#ffffff') {
-    this.floaters.push({ x, y, vy: -55, life: 700, maxLife: 700, text, color });
+  floatText(x, y, text, color = '#ffffff', big = false) {
+    this.floaters.push({ x, y, vy: big ? -40 : -55, life: big ? 900 : 700, maxLife: big ? 900 : 700, text, color, big });
   }
 
   /**

@@ -8,6 +8,7 @@
 export const Easing = {
   linear: (t) => t,
   easeOutQuad: (t) => t * (2 - t),
+  easeInQuad: (t) => t * t,
   easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   /** เด้งเลยเป้าหมายนิดนึงก่อนตกกลับที่ — ใช้ตอนลูกกวาดหล่นลงจอด (⑦ Landing Bounce) */
   easeOutBack: (t) => {
@@ -25,20 +26,26 @@ class Tween {
    * @param {(t:number)=>number} ease
    * @param {() => void} resolve เรียกเมื่อจบ
    */
-  constructor(target, props, duration, ease, resolve) {
+  constructor(target, props, duration, ease, resolve, delay = 0) {
     this.target = target;
     this.duration = duration;
     this.ease = ease;
     this.resolve = resolve;
-    this.elapsed = 0;
+    this.elapsed = -delay; // delay = รอก่อนเริ่มขยับ (ใช้ทำ stagger/ripple)
+    this.started = false;
     this.from = {};
     this.to = props;
-    for (const key of Object.keys(props)) this.from[key] = target[key];
   }
 
   /** @returns {boolean} true = จบแล้ว */
   update(dt) {
     this.elapsed += dt;
+    if (this.elapsed < 0) return false; // ยังอยู่ในช่วง delay
+    if (!this.started) {
+      // จับค่าเริ่มต้นตอน "เริ่มขยับจริง" ไม่ใช่ตอนสร้าง — ค่าอาจถูกแก้ระหว่างรอ delay
+      this.started = true;
+      for (const key of Object.keys(this.to)) this.from[key] = this.target[key];
+    }
     const t = Math.min(1, this.elapsed / this.duration);
     const k = this.ease(t);
     for (const key of Object.keys(this.to)) {
@@ -93,9 +100,9 @@ export class Animation {
    * ทำให้ Game เขียนลำดับเหตุการณ์แบบ async/await ได้สะอาดๆ
    * @returns {Promise<void>}
    */
-  tween(target, props, duration, ease = Easing.easeOutQuad) {
+  tween(target, props, duration, ease = Easing.easeOutQuad, delay = 0) {
     return new Promise((resolve) => {
-      this.tweens.push(new Tween(target, props, duration, ease, resolve));
+      this.tweens.push(new Tween(target, props, duration, ease, resolve, delay));
     });
   }
 

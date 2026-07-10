@@ -7,8 +7,8 @@
  *   - ปัด (swipe): ลากเกิน threshold ในทิศ ซ้าย/ขวา/บน/ล่าง → onSwipe(from, to)
  */
 export class Input {
-  /** ระยะลาก (px หน้าจอจริง) ขั้นต่ำก่อนนับเป็นการปัด ไม่ใช่แตะ */
-  static SWIPE_THRESHOLD = 28;
+  /** ระยะลาก (px หน้าจอจริง) ขั้นต่ำก่อนนับเป็นการปัด ไม่ใช่แตะ (ลดจาก 28 → ตอบสนองไวขึ้น) */
+  static SWIPE_THRESHOLD = 18;
 
   /**
    * @param {HTMLCanvasElement} canvas
