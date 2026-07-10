@@ -14,6 +14,8 @@ export class Renderer {
   static LOGICAL = 512;
   /** ขนาดช่อง (px logical) */
   static CELL = 64;
+  /** ระยะห่างระหว่างลูกกวาด (px logical) — กันกระดานดูอัดแน่นเกินไป */
+  static GAP = 4;
   /** ขนาดสไปรต์พิกเซล (16x16 ขยาย 4 เท่า = 64) */
   static SPRITE = 16;
 
@@ -393,7 +395,7 @@ export class Renderer {
     const phase = (cell.col * 340 + cell.row * 260);
     const breathe = 1 + 0.03 * (0.5 + 0.5 * Math.sin((time + phase) / 900));
 
-    const size = C * candy.scale * breathe;
+    const size = (C - Renderer.GAP) * candy.scale * breathe;
     const px = cell.col * C + C / 2 + candy.offsetX - size / 2;
     const py = cell.row * C + C / 2 + candy.offsetY - size / 2;
     if (size <= 0) return;

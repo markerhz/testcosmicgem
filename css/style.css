@@ -30,28 +30,44 @@ header small{
   display:block;margin-top:8px;
   font-size:.55em;color:#4da8ff;text-shadow:2px 2px 0 #1a1030;
 }
-/* HUD คะแนนสไตล์ 8-bit */
-#hud{display:flex;gap:12px;margin:0 0 12px;justify-content:center}
-.hud-box{
-  background:#1a1030;
+/* HUD คะแนนสไตล์ 8-bit ผสมพรีเมียม: กลุ่มพาเนลมนโปร่งแสง (④ HUD Redesign) */
+#hud{display:flex;gap:10px;margin:0 0 10px;justify-content:center;align-items:stretch}
+.hud-group{
+  display:flex;gap:0;
+  background:rgba(26,16,48,.72);
   border:3px solid #7b5cff;
-  box-shadow:4px 4px 0 rgba(0,0,0,.45);
-  padding:8px 16px;min-width:110px;
+  border-radius:10px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.4);
+  overflow:hidden;
+  backdrop-filter:blur(2px);
 }
+.hud-box{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 14px;min-width:96px;
+}
+.hud-group .hud-box+.hud-box{border-left:2px solid rgba(123,92,255,.5)}
+.hud-icon{font-size:1.1em;line-height:1}
+.hud-text{display:flex;flex-direction:column;align-items:flex-start}
 .hud-label{
   display:block;
   font-family:'Press Start 2P','Courier New',monospace;
-  font-size:.45em;color:#4da8ff;margin-bottom:6px;
+  font-size:.4em;color:#9db4ff;margin-bottom:3px;letter-spacing:.02em;
 }
 .hud-value{
   font-family:'Press Start 2P','Courier New',monospace;
-  font-size:.9em;color:#fff;
+  font-size:.8em;color:#fff;
 }
 #mult.hot{color:#ffd84d;text-shadow:2px 2px 0 #9c2033}
 .hud-btn{
   min-width:auto;display:flex;align-items:center;justify-content:center;
-  font-size:1.3em;cursor:pointer;color:#fff;
+  padding:0 14px;
+  background:rgba(26,16,48,.72);
+  border:3px solid #7b5cff;
+  border-radius:10px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.4);
+  font-size:1.2em;cursor:pointer;color:#fff;
   font-family:inherit;
+  backdrop-filter:blur(2px);
 }
 .hud-btn:active{box-shadow:2px 2px 0 rgba(0,0,0,.45);transform:translate(2px,2px)}
 .hud-btn.muted{opacity:.55}
