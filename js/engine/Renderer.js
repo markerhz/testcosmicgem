@@ -454,16 +454,17 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
-  /** วาดเลขคะแนนลอยขึ้น ด้วยฟอนต์พิกเซลตัดขอบดำ */
+  /** วาดเลขคะแนนลอยขึ้น ด้วยฟอนต์พิกเซลตัดขอบดำ — รองรับตัวใหญ่ (big) สำหรับ COMBO/คะแนนก้อนโต */
   drawFloaters(effects) {
     const ctx = this.ctx;
     ctx.textAlign = 'center';
-    ctx.font = "12px 'Press Start 2P', monospace";
     for (const f of effects.floaters) {
+      ctx.font = (f.big ? 20 : 12) + "px 'Press Start 2P', monospace";
       const alpha = Math.max(0, Math.min(1, f.life / f.maxLife / 0.4));
       ctx.globalAlpha = alpha;
+      const o = f.big ? 2 : 1; // เงาหนาขึ้นตามขนาดตัวอักษร
       ctx.fillStyle = Renderer.OUTLINE;
-      ctx.fillText(f.text, f.x + 1, f.y + 1);
+      ctx.fillText(f.text, f.x + o, f.y + o);
       ctx.fillStyle = f.color;
       ctx.fillText(f.text, f.x, f.y);
     }
