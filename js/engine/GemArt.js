@@ -20,12 +20,12 @@ export class GemArt {
    * (Game.js ใช้แค่ .m สำหรับสีพาร์ติเคิล — key เดิมครบ ไม่กระทบใคร)
    */
   static PALETTE = [
-    { dd: '#5a1428', d: '#a8244a', m: '#f04d74', l: '#ff85a2', s: '#ffd4e0', c: '#ffb27a' }, // 0 Ruby Core
-    { dd: '#6b4408', d: '#c08812', m: '#ffc93e', l: '#ffe374', s: '#fff8d8', c: '#ffffff' }, // 1 Nova Crystal
-    { dd: '#0e4a2c', d: '#1f8a50', m: '#37cd7f', l: '#7ff0b2', s: '#d8ffe8', c: '#f0fff8' }, // 2 Emerald Pulse
-    { dd: '#173a61', d: '#3070ab', m: '#58a8e8', l: '#96d2fa', s: '#e0f3ff', c: '#ffffff' }, // 3 Meteor Shard
-    { dd: '#44226b', d: '#7a41b4', m: '#b46ef0', l: '#d4a4fa', s: '#f3e4ff', c: '#ffd9f4' }, // 4 Nebula Prism
-    { dd: '#6b3408', d: '#b86614', m: '#ffa032', l: '#ffc46a', s: '#ffedc8', c: '#fffbe8' }, // 5 Solar Core
+    { dd: '#5c0e28', d: '#a01840', m: '#e83a64', l: '#ff7290', s: '#ffd4e0', c: '#ffeaf0' }, // 0 Ruby Core
+    { dd: '#6e4404', d: '#b8820e', m: '#f4b830', l: '#ffdd66', s: '#fff6d0', c: '#ffffff' }, // 1 Nova Crystal
+    { dd: '#0a4426', d: '#178a4c', m: '#2ecc7a', l: '#72ecac', s: '#d4ffe6', c: '#f4fff8' }, // 2 Emerald Pulse
+    { dd: '#123a68', d: '#2560a0', m: '#3f9ade', l: '#84d4ff', s: '#e0f6ff', c: '#ffffff' }, // 3 Meteor Shard
+    { dd: '#3a1866', d: '#6c34ac', m: '#a45cec', l: '#cc9cfa', s: '#efe0ff', c: '#ffd8f8' }, // 4 Nebula Prism
+    { dd: '#663404', d: '#a05a10', m: '#e08a1e', l: '#ffc14e', s: '#ffedc0', c: '#fff8e4' }, // 5 Solar Core
   ];
   /** สีเส้นขอบ (ดำอมม่วงอุ่น — ลายเซ็น GemVerse) */
   static OUTLINE = '#221728';
@@ -74,6 +74,32 @@ export class GemArt {
     return P.s;
   }
 
+  /**
+   * ฐานความสว่างสไตล์ "แก้วคริสตัล" (TASK-010) — ใช้ร่วมทุกเจม:
+   * ขอบในหนามืด (เนื้อแก้วหนา) → เนื้อกลางสว่าง → แถบแสงทแยงพาด (caustic)
+   */
+  static glassBright(dx, dy, mv) {
+    let b = 0.58;
+    if (mv > 0.72) b = 0.14;        // ขอบในมืด
+    else if (mv > 0.55) b = 0.34;   // ไล่เข้าหาขอบ
+    const band = dx + dy;
+    if (band > -8 && band < -4 && mv <= 0.72) b = 0.95; // แถบแสงทแยง
+    return b;
+  }
+
+  /** ดาวจิ๋วในเนื้อเจม — จักรวาลถูกขังไว้ข้างใน (ความอวกาศ) */
+  static stardust(grid, P, pts) {
+    for (const [x, y, big] of pts) {
+      GemArt.dot(grid, x, y, '#ffffff');
+      if (big) {
+        GemArt.dot(grid, x + 1, y, P.s);
+        GemArt.dot(grid, x - 1, y, P.s);
+        GemArt.dot(grid, x, y + 1, P.s);
+        GemArt.dot(grid, x, y - 1, P.s);
+      }
+    }
+  }
+
   // =====================================================
   // โปรไฟล์ต่อเจม: shape → mv (0 กลาง … 1 ขอบ, >1 นอกตัว) | facet → ความสว่าง 0..1
   // =====================================================
@@ -85,21 +111,13 @@ export class GemArt {
         return Math.max(ax / 12.8, (0.5 * ax + ay) / 14.6);
       },
       facet(dx, dy, mv) {
-        if (mv < 0.52) { // หน้าตัดกลาง: สว่าง + แถบสะท้อนทแยง
-          const streak = (dx + dy > -6 && dx + dy < -1) ? 0.22 : 0;
-          return 0.66 + streak;
-        }
-        // มงกุฎรอบนอก: 6 เหลี่ยมตามขอบหกเหลี่ยม — normal ต่อเซกเตอร์
-        const th = Math.atan2(dy, dx);
-        const idx = Math.floor(((th + Math.PI) / (Math.PI / 3))) % 6;
-        const na = -Math.PI + (idx + 0.5) * (Math.PI / 3);
-        return GemArt.facetBright(Math.cos(na), Math.sin(na));
+        let b = GemArt.glassBright(dx, dy, mv);
+        if (mv < 0.5 && b < 0.9) b += 0.06;                         // หน้าตัดกลางใสขึ้น
+        return b;
       },
       detail(grid, P) {
-        GemArt.paintCore(grid, 15.5, 17, 3.2, P.c, P.l);           // แกนหลอมอุ่นค่อนล่าง
-        for (const [cx, cy] of [[8, 8], [9, 9], [23, 21], [22, 22], [24, 20]]) {
-          GemArt.dot(grid, cx, cy, P.dd);                           // รอยร้าวบนไหล่
-        }
+        GemArt.paintCore(grid, 15.5, 17, 3.0, P.c, P.l);            // แกนเรืองอุ่น
+        GemArt.stardust(grid, P, [[9, 12, false], [22, 9, true], [20, 22, false]]);
       },
     },
     { // 1 — Nova Crystal: ดาว 4 แฉกเจียรคม สันแฉกรับแสง แกนขาวเรือง
@@ -109,15 +127,14 @@ export class GemArt {
       },
       facet(dx, dy, mv) {
         const ax = Math.abs(dx), ay = Math.abs(dy);
-        let b = 0.82 - mv * 0.52;                                   // ไล่จากแกนสว่างสู่ปลายแฉก
-        if (Math.min(ax, ay) < 1.6) b += 0.18;                      // สันกลางแฉกเป็นแนวรับแสง
-        if (dx + dy > 3) b -= 0.16;                                  // ฝั่งเงา
+        let b = GemArt.glassBright(dx, dy, mv) + (0.18 - mv * 0.3); // แกนสว่างไล่สู่ปลาย
+        if (Math.min(ax, ay) < 1.6 && mv > 0.3) b += 0.2;           // สันแฉกสว่าง
         if (mv < 0.26) b = 0.95;                                     // แกนกลาง
         return b;
       },
       detail(grid, P) {
         GemArt.paintCore(grid, 15.5, 15.5, 2.6, P.c, P.s);
-        for (const [cx, cy] of [[15, 3], [16, 3], [3, 15], [3, 16]]) GemArt.dot(grid, cx, cy, P.s); // ประกายปลายแฉกฝั่งแสง
+        GemArt.stardust(grid, P, [[15, 5, false], [5, 15, false], [24, 18, false]]);
       },
     },
     { // 2 — Emerald Pulse: มรกตเจียรขั้นบันได (step cut) + ปุ่มงอกออร์แกนิก + เส้นแร่
@@ -128,19 +145,17 @@ export class GemArt {
         return Math.max(ax / 9.6, ay / 13.6, (ax + ay) / 19.2);
       },
       facet(dx, dy, mv) {
-        // ขั้นบันไดแนวนอน: แต่ละขั้นสะท้อนแสงสลับกัน (เอกลักษณ์ emerald cut)
+        let b = GemArt.glassBright(dx, dy, mv);
         const step = Math.floor((dy + 16) / 4.6) % 4;
-        let b = [0.72, 0.5, 0.62, 0.42][step];
-        b += dx < 0 ? 0.1 : -0.06;                                   // ฝั่งซ้ายรับแสง
-        if (mv > 0.78) b -= 0.14;                                    // เหลี่ยมข้างมืดลง
+        if (b > 0.2 && b < 0.9) b += [0.08, -0.06, 0.03, -0.1][step]; // ขั้นบันไดจางๆ ใต้ผิวแก้ว
         return b;
       },
       detail(grid, P) {
-        for (let y = 6; y <= 25; y++) {                              // เส้นแร่คดเคี้ยวกลางลำ
+        for (let y = 7; y <= 24; y++) {                              // เส้นแร่เรืองกลางลำ
           const vx = 15 + ((y % 8 < 4) ? 0 : 2) - ((y % 16 < 8) ? 1 : 0);
           GemArt.dot(grid, vx, y, P.c);
-          if (y % 3 === 0) GemArt.dot(grid, vx + 1, y, P.s);
         }
+        GemArt.stardust(grid, P, [[10, 9, false], [21, 20, true]]);
       },
     },
     { // 3 — Meteor Shard: สะเก็ดน้ำแข็ง 5 ระนาบตัด — แต่ละระนาบคือเหลี่ยมจริง มีสันแตกระหว่างระนาบ
@@ -151,7 +166,7 @@ export class GemArt {
         for (const c of cuts) if (c.v > mx) mx = c.v;
         return 1 + (mx + j) / 10.8;
       },
-      facet(dx, dy) {
+      facet(dx, dy, mv) {
         const cuts = GemArt.meteorCuts(dx, dy);
         let best = 0, second = 1;
         if (cuts[second].v > cuts[best].v) { best = 1; second = 0; }
@@ -159,13 +174,14 @@ export class GemArt {
           if (cuts[i].v > cuts[best].v) { second = best; best = i; }
           else if (cuts[i].v > cuts[second].v) second = i;
         }
-        let b = GemArt.facetBright(cuts[best].nx, cuts[best].ny);    // แสงตามระนาบที่ใกล้สุด
-        if (cuts[best].v - cuts[second].v > -1.4) b -= 0.22;         // สันแตกระหว่างระนาบ = ร่องมืด
+        let b = GemArt.glassBright(dx, dy, mv);
+        if (b > 0.2 && b < 0.9) b += (GemArt.facetBright(cuts[best].nx, cuts[best].ny) - 0.5) * 0.34; // ระนาบใต้ผิวแก้ว
+        if (cuts[best].v - cuts[second].v > -1.4) b -= 0.2;          // สันแตกระหว่างระนาบ
         return b;
       },
       detail(grid, P) {
         GemArt.paintCore(grid, 17, 13, 3.0, P.c, P.l);               // แกนเรืองเย็น
-        for (const [cx, cy] of [[10, 19], [11, 20], [12, 21], [20, 18], [21, 19]]) GemArt.dot(grid, cx, cy, P.dd);
+        GemArt.stardust(grid, P, [[12, 10, false], [10, 22, false], [21, 17, true]]);
       },
     },
     { // 4 — Nebula Prism: ผลึกไหลออร์แกนิก แสงหมุนวนในเนื้อเหมือนหมอกจักรวาล
@@ -174,13 +190,15 @@ export class GemArt {
         return Math.pow(Math.abs(nx) / 11.8, 1.7) + Math.pow(Math.abs(dy) / 13.4, 1.7);
       },
       facet(dx, dy, mv) {
+        let b = GemArt.glassBright(dx, dy, mv);
         const th = Math.atan2(dy, dx);
-        const swirl = Math.sin(th * 2.2 + mv * 6.5) * 0.16;          // คลื่นหมุนในเนื้อ
-        return 0.56 + swirl - (dx + dy) / 34;                        // ไล่สว่างบนซ้าย→เงาล่างขวา
+        if (b > 0.2 && b < 0.9) b += Math.sin(th * 2.2 + mv * 6.5) * 0.14; // หมอกหมุนวนใต้ผิว
+        return b;
       },
       detail(grid, P) {
-        GemArt.paintCore(grid, 14, 16, 4.6, P.l, null);              // เรืองในกว้าง
+        GemArt.paintCore(grid, 14, 16, 4.4, P.l, null);              // เรืองในกว้าง
         GemArt.paintCore(grid, 14, 16, 2.2, P.c, null);              // ใจกลางชมพูเนบิวลา
+        GemArt.stardust(grid, P, [[8, 9, false], [22, 12, true], [19, 23, false], [10, 21, false]]);
       },
     },
     { // 5 — Solar Core: แกนกลมวิศวกรรม เหลี่ยมรัศมี 12 ช่อง + วงแหวนกลึง + แกนทองคำ
@@ -189,17 +207,14 @@ export class GemArt {
       },
       facet(dx, dy, mv) {
         const r = mv * 13.6;
-        if (Math.abs(r - 8.2) < 0.9 || Math.abs(r - 11.2) < 0.8) return 0.2; // วงแหวนกลึงมืด
-        if (mv < 0.32) {                                             // หน้าปัดกลาง
-          return 0.8 + ((dx + dy < -2) ? 0.15 : 0);
-        }
-        const th = Math.atan2(dy, dx);
-        const idx = Math.floor((th + Math.PI) / (Math.PI / 6)) % 12; // เหลี่ยมรัศมี 12 ช่อง
-        const na = -Math.PI + (idx + 0.5) * (Math.PI / 6);
-        return GemArt.facetBright(Math.cos(na), Math.sin(na)) * 0.85 + 0.08;
+        let b = GemArt.glassBright(dx, dy, mv);
+        if ((Math.abs(r - 8.4) < 0.8 || Math.abs(r - 11.2) < 0.7) && b < 0.9) b = 0.22; // วงแหวนกลึง
+        else if (mv < 0.32 && b < 0.9) b += 0.16;                    // หน้าปัดกลางสว่าง
+        return b;
       },
       detail(grid, P) {
         GemArt.paintCore(grid, 15.5, 15.5, 3.0, P.c, P.s);           // แกนทองสว่าง
+        GemArt.stardust(grid, P, [[9, 10, false], [22, 20, false]]);
       },
     },
   ];
@@ -420,16 +435,18 @@ export class GemArt {
     // ลอยไร้แรงโน้มถ่วง: โยกขึ้นลงเป็นหลัก + เอียงซ้ายขวาเบาๆ คนละจังหวะต่อเม็ด
     const floatY = Math.sin((time + phase) / A.floatSpeed) * A.floatAmp * Math.min(1, candy.scale);
     const floatX = Math.sin((time + phase) / (A.floatSpeed * 1.6) + 1.7) * A.floatAmp * 0.45 * Math.min(1, candy.scale);
-    const breathe = 1 + 0.02 * (0.5 + 0.5 * Math.sin((time + phase) / 900));
 
-    const base = (C - this.GAP) * candy.scale * breathe;
+    // 🔍 ความคม (TASK-010): วาดที่ 2 เท่าของสไปรต์เป๊ะ (32→64) ไม่มี breathe บิดสเกล
+    // ระยะห่างระหว่างเม็ดมาจากขอบโปร่งใสในตัวสไปรต์เอง — พิกเซลทุกเม็ดขนาดเท่ากันเสมอ
+    const base = C * candy.scale;
     if (base <= 0) return;
     const width = base * candy.scaleX;
     const height = base * candy.scaleY;
     const cx = cell.col * C + C / 2 + candy.offsetX + floatX;
     const cy = cell.row * C + C / 2 + candy.offsetY + floatY;
-    const px = cx - width / 2;
-    const py = cy - height / 2;
+    // ปัดพิกัดเป็นจำนวนเต็ม — กันพิกเซลเหลื่อมครึ่งช่อง (ต้นเหตุภาพ "เบลอๆ" เดิม)
+    const px = Math.round(cx - width / 2);
+    const py = Math.round(cy - height / 2);
 
     // ออร่าวิ้งด้านหลัง: ใหญ่ขึ้น + อัลฟาเต้นตามจังหวะของเจมชนิดนั้น
     const pulse = 0.7 + 0.3 * (0.5 + 0.5 * Math.sin((time + phase) / A.glowSpeed));
