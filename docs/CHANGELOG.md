@@ -1,5 +1,15 @@
 # Changelog
 
+## 🌌 Sprint 3 / TASK-011: Background & Lighting — 2026-07-11
+
+### ยกระดับพื้นหลัง + แสงให้รับกับเจม Glassy Cosmic (v0.5.0)
+- **แสง "เตาไฟจักรวาล" (hearth light)** — radial glow อุ่นจากกลางกระดาน วาดใต้เจมด้วย composite `lighter` → ส่องฉากหลังให้อุ่น เจม jewel-tone รู้สึกถูกส่องจากแหล่งอุ่นแหล่งเดียว ไม่ใช่นีออนแบน (ART_BIBLE §1)
+- **เต้นราวหัวใจ** — ความสว่าง hearth เต้นช้าๆ (คาบ ~9.4s) ผ่าน `globalAlpha` ล้วน (ART_BIBLE §2: lights pulse like a heartbeat)
+- **เนบิวลาอุ่นซึมจากฐาน + เมฆเย็นนอกหน้าต่าง** — เพิ่ม 2 คลัสเตอร์ dither: อุ่นแอมเบอร์เพิ่มความ cozy, มิ้นต์เย็นระยะไกลตัดโทนให้เจมเด่น
+- **ขอบจออุ่นขึ้น** — vignette เดิมม่วงเย็น → น้ำตาลอุ่นหม่น ฟีลห้องโดยสารยานอบอุ่น
+- คงหลักศูนย์ allocation ต่อเฟรม (TASK-003): sprite แสงทั้งหมด prebuild ครั้งเดียว ต่อเฟรมเหลือ drawImage + คณิตล้วน
+
+
 ## 🔮 Sprint 3 / TASK-010: Glassy Cosmic Gems — 2026-07-11
 
 ### ชุดเจมใหม่สไตล์ Glassy Crystal (ผู้กำกับศิลป์เลือกจาก 3 concept)

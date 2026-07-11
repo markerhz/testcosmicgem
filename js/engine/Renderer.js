@@ -37,6 +37,7 @@ export class Renderer {
     /** งานอาร์ตเจมทั้งหมดอยู่ในโมดูลนี้ */
     this.gemArt = new GemArt(Renderer.CELL, Renderer.GAP);
     this.buildBackground();
+    this.buildHearthLight();
     this.buildCRTOverlay();
     this.buildShootingStars();
     this.resize();
@@ -59,6 +60,10 @@ export class Renderer {
       [130, 100, 90, 'rgba(123,92,255,.22)'],
       [400, 380, 110, 'rgba(77,184,255,.16)'],
       [420, 90, 70, 'rgba(232,64,79,.14)'],
+      // แสงอุ่นซึมขึ้นจากฐานกระดาน — "เตาไฟจักรวาล" ทำให้เจม jewel-tone อุ่นขึ้น (ART_BIBLE: warm amber)
+      [256, 372, 150, 'rgba(255,176,92,.10)'],
+      // เมฆเนบิวลาเย็นระยะไกลนอกหน้าต่าง — เพิ่มมิติ/ตัดกับโทนอุ่นให้เจมเด่น (นอกยานเท่านั้น)
+      [300, 150, 82, 'rgba(96,214,196,.09)'],
     ];
     for (const [cx, cy, cr, color] of clusters) {
       g.fillStyle = color;
@@ -100,6 +105,26 @@ export class Renderer {
         style: `rgba(255,255,255,${alpha})`,
       });
     }
+  }
+
+  /**
+   * แสงอุ่น "เตาไฟจักรวาล" (ART_BIBLE §1: soft amber indirect lighting)
+   * เตรียม radial glow อุ่นครั้งเดียวตอน constructor — ต่อเฟรมแค่ drawImage + คุมความเต้นด้วย globalAlpha
+   * ให้เจม jewel-tone รู้สึกถูกส่องจากแหล่งอุ่นแหล่งเดียว ไม่ใช่นีออนแบน
+   */
+  buildHearthLight() {
+    const L = Renderer.LOGICAL;
+    const c = document.createElement('canvas');
+    c.width = L; c.height = L;
+    const g = c.getContext('2d');
+    const cx = L / 2, cy = L * 0.46; // สูงกว่ากลางเล็กน้อย — ทิศแสงร่วมกับ GemArt (บน)
+    const grad = g.createRadialGradient(cx, cy, L * 0.05, cx, cy, L * 0.62);
+    grad.addColorStop(0, 'rgba(255,214,150,0.30)');
+    grad.addColorStop(0.5, 'rgba(255,176,96,0.12)');
+    grad.addColorStop(1, 'rgba(255,150,80,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, L, L);
+    this.hearth = c;
   }
 
   /**
@@ -155,7 +180,7 @@ export class Renderer {
     for (let y = 0; y < L; y += 4) g.fillRect(0, y, L, 2);
     const v = g.createRadialGradient(L / 2, L / 2, L * 0.42, L / 2, L / 2, L * 0.75);
     v.addColorStop(0, 'transparent');
-    v.addColorStop(1, 'rgba(5,0,15,.4)');
+    v.addColorStop(1, 'rgba(24,8,6,.42)'); // ขอบอุ่นหม่น (เดิมม่วงเย็น) ให้ฟีลห้องโดยสารอบอุ่น
     g.fillStyle = v;
     g.fillRect(0, 0, L, L);
     this.crt = c;
@@ -235,6 +260,16 @@ export class Renderer {
     }
 
     this.drawShootingStars(time);
+
+    // แสงอุ่น "เตาไฟจักรวาล" เต้นช้าๆ ราวหัวใจ (ART_BIBLE §2: lights pulse like a heartbeat)
+    // วาดใต้เจมด้วย 'lighter' → ส่องฉากหลังให้อุ่น แล้วเจมทับด้านบนจึงยังคม
+    // คุมความสว่างด้วย globalAlpha ล้วน — คงหลักศูนย์ allocation ต่อเฟรม (TASK-003)
+    const beat = 0.80 + 0.20 * (0.5 + 0.5 * Math.sin(time / 1500));
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = beat;
+    ctx.drawImage(this.hearth, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
 
     // เจมทุกเม็ด — มอบหมายให้ GemArt (Renderer ไม่รู้วิธีวาด)
     board.forEachCell((cell) => {
