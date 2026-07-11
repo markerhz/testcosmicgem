@@ -2,36 +2,34 @@
 
 Current Version
 
-v0.4 (Sprint 2 closed)
-
-Next Development Target
-
-**v0.5**
+v0.5.0 (in progress — Visual Identity ~60%)
 
 Current Sprint
 
-Sprint 3 — Polish & Infrastructure
+Sprint 3 — v0.5 Visual Identity
 
-Sprint 2 Result
+Sprint Goal
 
-CLOSED — ส่งมอบครบ: GemArt architecture, unique silhouettes, mineral materials,
-zero per-frame allocations, 51 tests passing (ดู docs/SPRINT_REVIEW.md)
+ทำให้เกมมี "ตัวตน" — เห็นภาพเดียวก็รู้ว่าเป็นเกมนี้
 
-Current Tasks
+Done This Sprint
 
-- Special gem palette sync (bomb/nova เข้าจานสีแร่)
-- Gem idle identity (float/rotation/sparkle ต่างกันต่อเจม)
-- Version sync ทุกไฟล์ + tag v0.5
-- CI: รัน npm test อัตโนมัติทุก push
-- เก็บ debt เล็ก: FALL_DURATION, Effects.shakeOffset
+- Gem Art Overhaul v2: 32x32 เจียระไนจริง + จานสี jewel-tone (TASK-008)
+- Shine & Float: สีสดขึ้น, ออร่าวิ้งเต้น, ประกายโคจร, ลอยไร้แรงโน้มถ่วงคนละจังหวะ (TASK-009)
+- ตัวพิเศษเข้าชุด (ระเบิดโลหะแม็กม่า / โนวาขาวร้อนขอบรุ้ง)
 
-Out of Scope
+Current Tasks (เรียงตามลำดับ)
 
-- Multiplayer
-- Login
-- Economy
-- New game modes
-- Crew gameplay (v0.7)
+1. Background & Lighting ยกระดับ (ให้รับกับเจมใหม่)
+2. UI ธีม Tiny Universe — แผงควบคุมยานอวกาศ
+3. เสียง + Game Feel รอบเก็บ
+4. Sprite ขัดเกลารอบ Production (จบ v0.5)
+
+Out of Scope (รอ v0.6+)
+
+- Expedition / Gameplay ใหม่
+- Save system (คิวแรกของ v0.6)
+- Living Ship / Crew / Multiplayer / Economy
 
 Priority
 
