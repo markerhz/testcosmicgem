@@ -1,5 +1,21 @@
 # Changelog
 
+## 🔧 Sprint 3 / TASK-013: Version Sync + CI + UI lived-in pass — 2026-07-11
+
+### Version/ชื่อ sync (ปิดหนี้ก่อนแท็ก v0.5)
+- `index.html` (title+h1), `package.json` (name→`gemverse`, description), `docs/GDD.md` → **GemVerse v0.5.0** ตรงกันทั้ง repo (เดิม index/package ยังเป็น "SweetVerse Cosmic v0.4.1")
+- อัปเดต `docs/KNOWN_ISSUES.md` ปิดรายการ version mismatch
+
+### CI
+- เพิ่ม `.github/workflows/ci.yml` — รัน `node tests/test.js` (ต้องผ่าน 51 ข้อ) ทุก push/PR บน ubuntu + node 20
+
+### UI lived-in pass (ตอบ "ยังไม่ตรงใจ" — เดิมแผงเรียบเกินไป)
+- **ไฟสถานะ sage-green หายใจ** ข้างเกจ (ART_BIBLE §6: blinking status LEDs) ให้ฟีล "ระบบยานออนไลน์"
+- **หมุดทองเหลือง 4 มุม** บนแผงเกจ+ปุ่ม — โลหะประกอบด้วยมือ ไม่ใช่แผ่นเรียบโรงงาน (handcrafted/worn)
+- **ลายเสี้ยนไม้อุ่นจางๆ** บนพื้นห้องโดยสาร
+- ทั้งหมด CSS ล้วน + `prefers-reduced-motion` — ไม่แตะ JS/HTML โครงสร้าง
+
+
 ## 🛰️ Sprint 3 / TASK-012: UI Tiny Universe + เก็บดาวโคจร — 2026-07-11
 
 ### เอาดาวโคจรรอบเจมออก

@@ -21,7 +21,8 @@ body{
   margin:0;
   /* ห้องโดยสารยาน: ไม้อุ่นหม่น + ไอแสงทองจากเพดาน + เส้นสแกนบางๆ ให้ฟีลจออนาล็อก */
   background:
-    repeating-linear-gradient(0deg,rgba(0,0,0,.10) 0 2px,transparent 2px 4px),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.10) 0 2px,transparent 2px 4px),     /* เส้นสแกนจอ */
+    repeating-linear-gradient(90deg,rgba(120,74,38,.05) 0 3px,transparent 3px 7px), /* ลายเสี้ยนไม้อุ่นจางๆ */
     radial-gradient(ellipse at 50% 8%,#3a2414 0%,#1d120a 52%,#0d0805 100%);
   color:var(--cream);
   font-family:'Chakra Petch','Segoe UI',system-ui,Arial,sans-serif;
@@ -128,6 +129,33 @@ canvas{
   font-size:.85em;color:var(--cream-dim);opacity:.85;margin:14px 0;
   text-shadow:1px 1px 0 var(--wood-lo);
 }
+
+/* ═══ รายละเอียด "ยานมีชีวิต" (ART_BIBLE: handcrafted, worn, brass fittings, blinking LEDs) ═══ */
+/* ไฟสถานะระบบ — จุด sage-green หายใจช้าๆ ข้างเกจ ให้ฟีล "ระบบออนไลน์" */
+#hud{position:relative}
+#hud::before{
+  content:'';align-self:center;
+  width:11px;height:11px;border-radius:50%;
+  background:radial-gradient(circle at 35% 32%,#d6ecb6,#6f9e4e 70%);
+  border:2px solid var(--copper-lo);
+  box-shadow:inset 0 0 2px rgba(0,0,0,.5);
+  animation:led 3.4s ease-in-out infinite;
+}
+@keyframes led{
+  0%,100%{box-shadow:inset 0 0 2px rgba(0,0,0,.5),0 0 3px rgba(150,205,120,.35);}
+  50%    {box-shadow:inset 0 0 2px rgba(0,0,0,.5),0 0 9px rgba(150,205,120,.9);}
+}
+/* หมุดทองเหลือง 4 มุมบนแผงเกจ+ปุ่ม — โลหะประกอบด้วยมือ ไม่ใช่แผ่นเรียบโรงงาน */
+.hud-group,.hud-btn{position:relative}
+.hud-group::after,.hud-btn::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:
+    radial-gradient(circle at 9px 9px,#eabb80 0 1.5px,#6e4020 2px,transparent 2.9px),
+    radial-gradient(circle at calc(100% - 9px) 9px,#eabb80 0 1.5px,#6e4020 2px,transparent 2.9px),
+    radial-gradient(circle at 9px calc(100% - 9px),#eabb80 0 1.5px,#6e4020 2px,transparent 2.9px),
+    radial-gradient(circle at calc(100% - 9px) calc(100% - 9px),#eabb80 0 1.5px,#6e4020 2px,transparent 2.9px);
+}
+@media (prefers-reduced-motion:reduce){#hud::before{animation:none}}
 
 /* หายใจ: เรืองอุ่นรอบแผงเกจ ขึ้น-ลงช้ามาก (ART_BIBLE: soft breathing) */
 @keyframes breathe{

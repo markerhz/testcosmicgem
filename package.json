@@ -1,7 +1,7 @@
 {
-  "name": "sweetverse-cosmic",
+  "name": "gemverse",
   "version": "0.5.0",
-  "description": "เกม Match-3 กึ่งแอคชั่น ตีมลูกกวาดอวกาศ 8-bit + ระบบ Joker",
+  "description": "GemVerse — Modern Indie Match-3 Roguelite, HTML5 Canvas ล้วน (Tiny Living Universe)",
   "type": "module",
   "scripts": {
     "test": "node tests/test.js",

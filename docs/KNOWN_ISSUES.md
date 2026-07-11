@@ -32,7 +32,7 @@
 - `Game.FALL_DURATION` ค่าคงที่ตาย ไม่ถูกใช้แล้ว (fall คิดตามระยะจริง)
 - `Effects.shakeOffset` คืน object ใหม่ทุกเฟรม — จุด allocation สุดท้ายที่เหลือ
 - `tests/test.js` ไฟล์เดียว 300+ บรรทัด — ควรแยกตามระบบเมื่อโตกว่านี้
-- เลขเวอร์ชันใน `package.json` (0.4.1) ยังไม่ sync กับ target v0.5
+- ~~เลขเวอร์ชัน/ชื่อไม่ sync~~ ✅ แก้แล้ว (TASK-013): index/package/GDD → GemVerse v0.5.0 ตรงกันทั้ง repo
 
 ## Known low priority issues
 

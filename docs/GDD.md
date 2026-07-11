@@ -1,4 +1,4 @@
-# Game Design Document — SweetVerse Cosmic
+# Game Design Document — GemVerse
 
 ## แนวคิด
 Match-3 **กึ่งแอคชั่น** ตีมลูกกวาดอวกาศ จุดขายคือ **ตัวเปลี่ยนเกม (Joker)**
