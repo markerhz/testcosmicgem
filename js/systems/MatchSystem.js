@@ -83,29 +83,41 @@ export class MatchSystem {
   planClears(matches, swapCell = null) {
     const clear = new Set();
     const spawns = [];
-    const hCells = new Set(), vCells = new Set(), bigGroupCells = new Set();
+    const hCells = new Set(), vCells = new Set();
     for (const g of matches) {
       for (const cell of g.cells) {
         clear.add(cell);
         (g.orient === 'h' ? hCells : vCells).add(cell);
-        if (g.length >= 4) bigGroupCells.add(cell);
       }
     }
-    const usedSpot = new Set();
-    // เรียง 4 = 💣 ระเบิด | เรียง 5+ = 🌟 ซูเปอร์โนวา (คงพฤติกรรมเดิม)
+    // จุดตัด L/T = เซลล์ที่อยู่ทั้ง run แนวนอนและแนวตั้ง
+    const pivots = new Set();
+    for (const cell of hCells) if (vCells.has(cell)) pivots.add(cell);
+
+    const consumed = new Set();
+    const spotOf = (g) => (swapCell && g.cells.includes(swapCell)) ? swapCell : g.cells[Math.floor(g.length / 2)];
+
+    // 1) เรียง 5+ (เส้นตรง) = 🌟 โนวา ล้างทั้งสี
     for (const g of matches) {
-      if (g.length >= 4) {
-        let spot = g.cells[Math.floor(g.length / 2)];
-        if (swapCell && g.cells.includes(swapCell)) spot = swapCell;
-        spawns.push({ cell: spot, type: g.type, special: g.length >= 5 ? 'nova' : 'bomb' });
-        usedSpot.add(spot);
+      if (g.length >= 5) {
+        spawns.push({ cell: spotOf(g), type: g.type, special: 'nova' });
+        for (const c of g.cells) consumed.add(c);
       }
     }
-    // รูปตัว L/T (แนวนอน×แนวตั้งตัดกัน) = 🚀 Drill Beam ล้างทั้งแถว+คอลัมน์ (ประยุกต์จาก Shopee rocket)
-    for (const cell of hCells) {
-      if (!vCells.has(cell) || usedSpot.has(cell) || bigGroupCells.has(cell)) continue;
-      spawns.push({ cell, type: cell.candy.type, special: 'rocket' });
-      usedSpot.add(cell);
+    // 2) รูป L/T (จุดตัดแนวนอน×แนวตั้ง) = 💣 ระเบิด 3x3
+    for (const cell of pivots) {
+      if (consumed.has(cell)) continue;
+      spawns.push({ cell, type: cell.candy.type, special: 'bomb' });
+      consumed.add(cell);
+    }
+    // 3) เรียง 4 (เส้นตรงล้วน ไม่แตะจุดตัด) = 🚀 จรวดตามแนว (นอน=ล้างแถว, ตั้ง=ล้างคอลัมน์)
+    for (const g of matches) {
+      if (g.length !== 4) continue;
+      if (g.cells.some((c) => pivots.has(c))) continue;
+      const spot = spotOf(g);
+      if (consumed.has(spot)) continue;
+      spawns.push({ cell: spot, type: g.type, special: g.orient === 'h' ? 'rocketH' : 'rocketV' });
+      consumed.add(spot);
     }
     return { clear, spawns };
   }
@@ -144,14 +156,17 @@ export class MatchSystem {
               clear.add(c); changed = true;
             }
           });
-        } else if (candy.special === 'rocket') {
+        } else if (candy.special === 'rocketH' || candy.special === 'rocketV') {
           rockets++;
           const N = this.board.size;
           for (let i = 0; i < N; i++) {
-            const a = this.board.getCell(i, cell.row);       // ทั้งแถว
-            if (a && a.candy && !clear.has(a)) { clear.add(a); changed = true; }
-            const b = this.board.getCell(cell.col, i);       // ทั้งคอลัมน์
-            if (b && b.candy && !clear.has(b)) { clear.add(b); changed = true; }
+            if (candy.special === 'rocketH') {                 // จรวดแนวนอน → ล้างทั้งแถว
+              const a = this.board.getCell(i, cell.row);
+              if (a && a.candy && !clear.has(a)) { clear.add(a); changed = true; }
+            } else {                                           // จรวดแนวตั้ง → ล้างทั้งคอลัมน์
+              const b = this.board.getCell(cell.col, i);
+              if (b && b.candy && !clear.has(b)) { clear.add(b); changed = true; }
+            }
           }
         }
       }

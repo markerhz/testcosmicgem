@@ -169,13 +169,20 @@ export class Game {
   async swap(a, b) {
     this.state = State.ANIMATING;
 
-    const hasNova = a.candy.special === 'nova' || b.candy.special === 'nova';
     this.sfx.swap();
     await this.animateSwap(a, b);
+    // หลังสลับ ตัวพิเศษย้ายไปอยู่ที่ cell a,b (สลับกัน)
+    const sa = a.candy && a.candy.special, sb = b.candy && b.candy.special;
 
-    if (hasNova) {
-      // โนวาเป็น match ในตัวเอง — ทำงานทันทีไม่ต้องเช็ค
+    if (sa && sb) {
+      // ตัวพิเศษ 2 ตัวชนกัน = คอมโบรวมร่าง
+      await this.activateSpecialSwap(a, b);
+    } else if (sa === 'nova' || sb === 'nova') {
+      // โนวาเดี่ยว + เม็ดปกติ = ล้างสีของอีกฝั่ง
       await this.activateNovaSwap(a, b);
+    } else if (sa || sb) {
+      // จรวด/ระเบิดเดี่ยว + เม็ดปกติ = จุดชนวนในที่
+      await this.activateSpecialSwap(a, b);
     } else {
       const matches = this.matchSystem.findMatches();
       if (matches.length === 0) {
@@ -270,6 +277,61 @@ export class Game {
     await this.dropAndRefill();
 
     // ต่อ cascade ตามปกติ (นับเป็นชั้น 2 ขึ้นไป)
+    await this.resolveCascade(this.matchSystem.findMatches(), null, 2);
+  }
+
+  /**
+   * สลับตัวพิเศษ 2 ตัว = ท่ารวมร่าง (ประยุกต์จาก Shopee/Candy Crush)
+   * หรือ ตัวพิเศษเดี่ยว + เม็ดปกติ = จุดชนวนในที่
+   * ศูนย์กลางเอฟเฟกต์อยู่ที่ cell b (ช่องปลายทางที่ผู้เล่นสลับไป)
+   */
+  async activateSpecialSwap(a, b) {
+    const N = this.board.size;
+    const clear = new Set();
+    const sp1 = a.candy && a.candy.special, sp2 = b.candy && b.candy.special;
+    const both = sp1 && sp2;
+    const isNova = sp1 === 'nova' || sp2 === 'nova';
+    const isRk = (s) => s === 'rocketH' || s === 'rocketV';
+    const rockets = [sp1, sp2].filter(isRk).length;
+    const bombs = [sp1, sp2].filter((s) => s === 'bomb').length;
+    const pivot = b;
+    const add = (c, r) => { const cc = this.board.getCell(c, r); if (cc && cc.candy) clear.add(cc); };
+    const addRow = (r) => { for (let i = 0; i < N; i++) add(i, r); };
+    const addCol = (c) => { for (let i = 0; i < N; i++) add(c, i); };
+
+    if (both && isNova) {
+      // โนวา + ตัวพิเศษใดๆ = ล้างทั้งกระดาน
+      this.board.forEachCell((c) => { if (c.candy) clear.add(c); });
+    } else if (both && bombs === 2) {
+      // ระเบิด + ระเบิด = 5x5
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) add(pivot.col + dc, pivot.row + dr);
+    } else if (both && rockets >= 1 && bombs >= 1) {
+      // จรวด + ระเบิด = 3 แถว + 3 คอลัมน์ (กากบาทหนา)
+      for (let d = -1; d <= 1; d++) { addRow(pivot.row + d); addCol(pivot.col + d); }
+    } else if (both && rockets === 2) {
+      // จรวด + จรวด = ล้างแถว + คอลัมน์ (กากบาทเต็ม)
+      addRow(pivot.row); addCol(pivot.col);
+    } else {
+      // ตัวพิเศษเดี่ยว + เม็ดปกติ = จุดชนวนในที่
+      const solo = sp1 ? a : b;
+      const sp = solo.candy.special;
+      if (sp === 'bomb') { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) add(solo.col + dc, solo.row + dr); }
+      else if (sp === 'rocketH') addRow(solo.row);
+      else if (sp === 'rocketV') addCol(solo.col);
+    }
+    clear.add(a); clear.add(b);
+    // ปิดสวิตช์ตัวพิเศษที่สลับ กันยิงซ้ำผิดตำแหน่ง (ตัวพิเศษอื่นในกองยังจุดชนวนต่อได้)
+    if (a.candy) a.candy.special = null;
+    if (b.candy) b.candy.special = null;
+
+    const info = this.matchSystem.expandClears(clear);
+    await this.clearStep(clear, [], {
+      chain: 1,
+      bombs: bombs + info.bombs,
+      novas: (isNova ? 1 : 0) + info.novas,
+      rockets: rockets + info.rockets,
+    });
+    await this.dropAndRefill();
     await this.resolveCascade(this.matchSystem.findMatches(), null, 2);
   }
 

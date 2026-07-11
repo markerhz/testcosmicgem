@@ -177,8 +177,8 @@ console.log('--- ลูกกวาดพิเศษ: planClears ---');
   const swapCell = board.getCell(0, 0);
   const { clear, spawns } = match.planClears(m, swapCell);
   ok(clear.size === 4, 'เรียง 4 → เคลียร์ 4 ช่อง');
-  ok(spawns.length === 1 && spawns[0].special === 'bomb' && spawns[0].cell === swapCell,
-    'เรียง 4 → 💣 เกิดตรงช่องที่สลับ');
+  ok(spawns.length === 1 && spawns[0].special === 'rocketH' && spawns[0].cell === swapCell,
+    'เรียง 4 แนวนอน → 🚀 จรวดแถว เกิดตรงช่องที่สลับ');
 }
 {
   setTypes(board, fillers('00000123'));
@@ -186,6 +186,26 @@ console.log('--- ลูกกวาดพิเศษ: planClears ---');
   const { spawns } = match.planClears(m, null);
   ok(spawns.length === 1 && spawns[0].special === 'nova', 'เรียง 5 → 🌟 โนวา');
   ok(spawns[0].cell === board.getCell(2, 0), 'ไม่ได้สลับ → เกิดกลางแถว');
+}
+
+{
+  // เรียง 4 แนวตั้ง → 🚀 จรวดคอลัมน์
+  const rr = fillers(rot(0)).map((r) => r.split(''));
+  for (let r = 0; r < 4; r++) rr[r][3] = '5';
+  setTypes(board, rr.map((row) => row.join('')));
+  const m = match.findMatches();
+  const { spawns } = match.planClears(m, board.getCell(3, 0));
+  ok(spawns.length === 1 && spawns[0].special === 'rocketV', 'เรียง 4 แนวตั้ง → 🚀 จรวดคอลัมน์');
+}
+{
+  // รูป L (000 นอน + 000 ตั้ง ตัดที่มุม) → 💣 ระเบิดที่จุดตัด
+  const rows = fillers('00032103');
+  rows[1] = '0' + rot(1).slice(1);
+  rows[2] = '0' + rot(2).slice(1);
+  setTypes(board, rows);
+  const m = match.findMatches();
+  const { spawns } = match.planClears(m, null);
+  ok(spawns.some((sp) => sp.special === 'bomb' && sp.cell === board.getCell(0, 0)), 'รูป L/T → 💣 ระเบิดที่จุดตัด');
 }
 
 console.log('--- ลูกกวาดพิเศษ: expandClears ---');
@@ -217,6 +237,21 @@ console.log('--- ลูกกวาดพิเศษ: expandClears ---');
   setTypes(board, fillers('00032103'));
   board.getCell(1, 0).candy.special = 'nova'; // กลางแถว 000 เป็นโนวา
   ok(match.findMatches().length === 0, 'โนวาไม่จับคู่แบบปกติ');
+}
+
+{
+  setTypes(board, fillers(rot(0)));
+  board.getCell(3, 3).candy.special = 'rocketH';
+  const clear = new Set([board.getCell(3, 3)]);
+  const info = match.expandClears(clear, () => 0.99);
+  ok(info.rockets === 1 && clear.size === 8, '🚀 แนวนอน ล้างทั้งแถว = 8 ช่อง (ได้ ' + clear.size + ')');
+}
+{
+  setTypes(board, fillers(rot(0)));
+  board.getCell(3, 3).candy.special = 'rocketV';
+  const clear = new Set([board.getCell(3, 3)]);
+  const info = match.expandClears(clear, () => 0.99);
+  ok(info.rockets === 1 && clear.size === 8, '🚀 แนวตั้ง ล้างทั้งคอลัมน์ = 8 ช่อง (ได้ ' + clear.size + ')');
 }
 
 console.log('--- ลูกกวาดพิเศษ: โบนัสคะแนน ---');
