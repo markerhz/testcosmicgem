@@ -1,5 +1,14 @@
 # Changelog
 
+## 🛰️ Sprint 3 / TASK-014: Ambient Machine Life — 2026-07-11
+
+### หน้าต่างอวกาศของเครื่องขุดมีชีวิต (ART_BIBLE §4 window to space + §6 ambient) — visual ล้วน
+- **ดาวเทียมโบราณลอยผ่าน** — silhouette โทนมอสส์ + ปีกโซลาร์ ลอยซ้าย→ขวาช้ามาก (คาบ ~52s, glacial) จางเข้า/ออกที่ขอบ ไม่วาบ
+- **ไฟบีคอนแดงกะพริบ** บนตัวดาวเทียม — ชีวิตกลไก สว่าง-ดับเป็นจังหวะ
+- **ฝนดาวตกจางๆ 4 เส้น** — distant meteor shower แยกจากดาวตกเด่น 2 เส้นเดิม เพิ่มความเคลื่อนไหวในระยะไกล
+- ทั้งหมดอยู่ **หลังเจม** ไม่บังกระดาน/ไม่แตะ gameplay — เตรียม sprite/gradient/Path2D ครั้งเดียว ต่อเฟรมเหลือคณิต+drawImage (คงศูนย์ allocation ต่อเฟรม, TASK-003)
+
+
 ## 🔧 Sprint 3 / TASK-013: Version Sync + CI + UI lived-in pass — 2026-07-11
 
 ### Version/ชื่อ sync (ปิดหนี้ก่อนแท็ก v0.5)

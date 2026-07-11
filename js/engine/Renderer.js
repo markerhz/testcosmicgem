@@ -40,6 +40,7 @@ export class Renderer {
     this.buildHearthLight();
     this.buildCRTOverlay();
     this.buildShootingStars();
+    this.buildWindowLife();
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -259,6 +260,7 @@ export class Renderer {
       ctx.fillRect(x, y, s.size === 8 ? 3 : 2, s.size === 8 ? 3 : 2);
     }
 
+    this.drawWindowLife(time);
     this.drawShootingStars(time);
 
     // แสงอุ่น "เตาไฟจักรวาล" เต้นช้าๆ ราวหัวใจ (ART_BIBLE §2: lights pulse like a heartbeat)
@@ -286,6 +288,94 @@ export class Renderer {
     // CRT ปิดท้ายทับทุกอย่าง (คงที่ ไม่ขยับตามจอสั่น ให้ฟีลกล้องสั่นในตู้ CRT จริง)
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     ctx.drawImage(this.crt, 0, 0);
+  }
+
+  /**
+   * ชีวิตในหน้าต่างอวกาศของเครื่องขุด (ART_BIBLE §4: window to space + §6: ambient)
+   * เตรียมทุกอย่างครั้งเดียว — ต่อเฟรมเหลือคณิต + drawImage (คงศูนย์ allocation, TASK-003)
+   *  • ดาวเทียมโบราณลอยผ่านช้ามาก (glacial) พร้อมไฟบีคอนกะพริบ
+   *  • ฝนดาวตกจางๆ หลายเส้น (distant meteor shower) — แยกจากดาวตกเด่น 2 เส้นเดิม
+   */
+  buildWindowLife() {
+    // — ดาวเทียมโบราณ (silhouette เข้มโทนมอสส์ + ปีกโซลาร์ + ขอบรับแสงบางๆ) —
+    const sat = document.createElement('canvas');
+    sat.width = 48; sat.height = 22;
+    const sg = sat.getContext('2d');
+    sg.fillStyle = '#0f1e1a';                 // ตัวถังเข้ม
+    sg.fillRect(16, 6, 16, 10);
+    sg.fillStyle = '#16302a';                 // แผงข้างสว่างขึ้นนิด
+    sg.fillRect(18, 8, 12, 2); sg.fillRect(18, 12, 12, 2);
+    sg.fillStyle = '#0c1815';                 // ปีกโซลาร์ซ้าย-ขวา
+    sg.fillRect(2, 9, 12, 4); sg.fillRect(34, 9, 12, 4);
+    sg.fillStyle = '#20463c';                 // ก้านต่อปีก
+    sg.fillRect(13, 10, 4, 2); sg.fillRect(31, 10, 4, 2);
+    sg.fillStyle = 'rgba(120,170,150,.5)';    // ขอบรับแสงบน (ทิศแสงร่วมกับทั้งฉาก)
+    sg.fillRect(16, 6, 16, 1);
+    this.satellite = sat;
+    // เส้นทางลอย: ซ้าย→ขวา ช่วงบนของหน้าต่าง คาบ ~52s (glacial) — ตำแหน่งบีคอนสัมพัทธ์กับตัวถัง
+    this.satelliteDef = { period: 52000, x0: -60, x1: 572, y: 74, bobAmp: 5, beakonX: 30, beakonY: 8 };
+
+    // — ฝนดาวตกจางๆ: เตรียม gradient+Path2D ต่อเส้นครั้งเดียว (เหมือน shootingStars แต่สั้น/จางกว่า) —
+    const defs = [
+      { period: 4200, delay: 600,  flight: 520, x0: 120, y0: 10, x1: 250, y1: 120 },
+      { period: 6100, delay: 2600, flight: 600, x0: 380, y0: 20, x1: 300, y1: 150 },
+      { period: 5200, delay: 1500, flight: 560, x0: 60,  y0: 40, x1: 170, y1: 160 },
+      { period: 7000, delay: 4200, flight: 640, x0: 460, y0: 30, x1: 360, y1: 170 },
+    ];
+    const len = 12;
+    this.meteors = defs.map((p) => {
+      const dx = p.x1 - p.x0, dy = p.y1 - p.y0;
+      const norm = Math.hypot(dx, dy) || 1;
+      const tx = -(dx / norm) * len, ty = -(dy / norm) * len;
+      const grad = this.ctx.createLinearGradient(tx, ty, 0, 0);
+      grad.addColorStop(0, 'rgba(210,225,255,0)');
+      grad.addColorStop(1, 'rgba(210,225,255,1)');
+      const path = new Path2D();
+      path.moveTo(tx, ty); path.lineTo(0, 0);
+      return { ...p, grad, path };
+    });
+  }
+
+  /**
+   * วาดชีวิตในหน้าต่าง (ไกลสุด — วาดหลังดาว ก่อนดาวตกเด่น/เจม)
+   * ทั้งหมดคณิตล้วน + drawImage/stroke จาก object ที่ prebuild แล้ว
+   */
+  drawWindowLife(time) {
+    const ctx = this.ctx;
+    // ฝนดาวตกจางๆ (จางกว่าดาวตกเด่นครึ่งหนึ่ง)
+    for (const p of this.meteors) {
+      const phase = (time + p.delay) % p.period;
+      if (phase > p.flight) continue;
+      const k = phase / p.flight;
+      const x = p.x0 + (p.x1 - p.x0) * k;
+      const y = p.y0 + (p.y1 - p.y0) * k;
+      const a = (k < 0.15 ? k / 0.15 : Math.max(0, 1 - (k - 0.15) / 0.85)) * 0.5;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = p.grad;
+      ctx.lineWidth = 1;
+      ctx.stroke(p.path);
+      ctx.restore();
+    }
+    // ดาวเทียมโบราณลอยผ่านช้ามาก
+    const S = this.satelliteDef;
+    const t = (time % S.period) / S.period;      // 0..1
+    const x = S.x0 + (S.x1 - S.x0) * t;
+    const y = S.y + Math.sin(t * Math.PI * 2) * S.bobAmp;
+    // จางเข้า/ออกที่ขอบจอ ให้ค่อยๆ โผล่-ลับ ไม่วาบ
+    const edge = Math.min(1, x / 60, (512 - x) / 60);
+    const a = Math.max(0, edge) * 0.7;
+    if (a > 0.01) {
+      ctx.globalAlpha = a;
+      ctx.drawImage(this.satellite, Math.round(x), Math.round(y));
+      // ไฟบีคอนแดงกะพริบ (ชีวิตกลไก) — สว่าง-ดับเป็นจังหวะ
+      const blink = 0.5 + 0.5 * Math.sin(time / 520);
+      ctx.globalAlpha = a * blink;
+      ctx.fillStyle = '#ff5a4a';
+      ctx.fillRect(Math.round(x) + S.beakonX, Math.round(y) + S.beakonY, 2, 2);
+      ctx.globalAlpha = 1;
+    }
   }
 
   /**
