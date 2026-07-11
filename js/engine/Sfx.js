@@ -1,24 +1,34 @@
 /**
  * Sfx — เสียงเอฟเฟกต์สังเคราะห์ด้วย WebAudio ล้วน (ไม่มีไฟล์เสียง)
- * สอดคล้องกับปรัชญาโปรเจกต์: สไปรต์สร้างด้วยโค้ด → เสียงก็สร้างด้วยโค้ดเหมือนกัน
+ * สอดคล้องกับปรัชญาโปรเจกต์: สไปรต์สร้างด้วยโค้ด → เสียงก็สร้างด้วยโค้ด
  *
- * AudioContext ต้องถูกสร้าง/resume หลังอินพุตจากผู้ใช้ (ข้อจำกัดเบราว์เซอร์)
- * เรียก ensureCtx() ตอนแตะจอครั้งแรกก็พอ (Game เรียกให้ทุกครั้งที่ tap อยู่แล้ว ราคาถูก)
+ * ปรัชญาเสียง (AUDIO_GUIDE): อุ่น / กลไก / นุ่ม / ผ่อนคลาย
+ *   Machine = soft hum, tick, light clunk | Crystal = heavy impact, soft shimmer
+ *   Never arcade. Never casino.
+ * เทคนิคหลักที่ทำให้ "ไม่ arcade": ทุกเสียงผ่าน lowpass ตัดความบาดหู
+ *   + มี attack สั้นๆ (ไม่ใช่คลิกทันที) + ใช้ sine/triangle เป็นหลัก
+ *
+ * AudioContext ต้องถูกสร้าง/resume หลัง gesture ผู้ใช้ (ข้อจำกัดเบราว์เซอร์)
  */
 export class Sfx {
   constructor() {
     /** @type {AudioContext|null} */
     this.ctx = null;
+    /** @type {GainNode|null} มาสเตอร์ — คุมระดับรวมกันแตกเวลาเสียงซ้อน */
+    this.master = null;
     this.muted = false;
   }
 
-  /** สร้าง/ปลุก AudioContext (ต้องเรียกหลัง gesture ของผู้ใช้) */
+  /** สร้าง/ปลุก AudioContext + มาสเตอร์บัส (ต้องเรียกหลัง gesture ผู้ใช้) */
   ensureCtx() {
     try {
       if (!this.ctx) {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return null;
         this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.9;
+        this.master.connect(this.ctx.destination);
       }
       if (this.ctx.state === 'suspended') this.ctx.resume();
       return this.ctx;
@@ -32,77 +42,129 @@ export class Sfx {
     return this.muted;
   }
 
+  /** ปลายทางของทุกเสียง (มาสเตอร์ถ้ามี ไม่งั้น destination) */
+  _out() { return this.master || this.ctx.destination; }
+
   /**
-   * เสียงโทนเดียว: oscillator + envelope decay แบบ exponential
-   * @param {number} freq Hz
-   * @param {number} duration วินาที
-   * @param {OscillatorType} type
-   * @param {number} gainStart 0..1
-   * @param {number} when หน่วงเวลาเริ่ม (วินาที) ใช้ทำคอร์ด/อาร์เพจโจ
+   * โทนอุ่น 1 เสียง: osc → lowpass → gain(attack/decay) → master
+   * attack สั้นๆ กันเสียง "คลิก" หัวโน้ต ให้ฟีลนุ่มแบบกลไก ไม่ใช่บี๊บอาร์เคด
+   * @param {object} o
+   * @param {number} o.freq Hz
+   * @param {number} o.dur วินาที (ช่วง decay)
+   * @param {OscillatorType} [o.type='sine']
+   * @param {number} [o.gain=0.2] พีคเกน
+   * @param {number} [o.when=0] หน่วงเริ่ม (วินาที)
+   * @param {number} [o.attack=0.008] เวลาไต่ขึ้น (วินาที)
+   * @param {number} [o.cutoff] ความถี่ตัด lowpass (ดีฟอลต์ = 4x freq, เพดาน 6kHz)
+   * @param {number} [o.glideTo] ถ้ากำหนด จะไถลความถี่ไปค่านี้ (เสียง clunk/impact)
    */
-  tone(freq, duration, type = 'sine', gainStart = 0.2, when = 0) {
+  voice(o) {
+    if (this.muted) return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + (o.when || 0);
+    const dur = o.dur;
+    const osc = ctx.createOscillator();
+    const lp = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.freq, t0);
+    if (o.glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.glideTo), t0 + dur);
+    lp.type = 'lowpass';
+    lp.frequency.value = Math.min(6000, o.cutoff || o.freq * 4);
+    lp.Q.value = 0.6;
+    const peak = o.gain == null ? 0.2 : o.gain;
+    const atk = o.attack == null ? 0.008 : o.attack;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak, t0 + atk);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + atk + dur);
+    osc.connect(lp); lp.connect(g); g.connect(this._out());
+    osc.start(t0);
+    osc.stop(t0 + atk + dur + 0.03);
+  }
+
+  /**
+   * เสียงเสียดสี/แรงกระแทกนุ่ม: white noise → lowpass → gain
+   * cutoff ต่ำ = ทุ้มอุ่น (clunk/rumble) ไม่ใช่ "ฉู่" แหลมแบบอาร์เคด
+   */
+  noise(dur = 0.16, gain = 0.14, cutoff = 1400, when = 0) {
     if (this.muted) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
     const t0 = ctx.currentTime + when;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t0);
-    gain.gain.setValueAtTime(gainStart, t0);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t0);
-    osc.stop(t0 + duration + 0.02);
-  }
-
-  /** ระเบิดเสียงสัญญาณรบกวน (white noise) ห่อ envelope — ใช้กับระเบิด/ระเบิดลูกโซ่ */
-  noiseBurst(duration = 0.18, gainStart = 0.2) {
-    if (this.muted) return;
-    const ctx = this.ensureCtx();
-    if (!ctx) return;
-    const size = Math.max(1, Math.floor(ctx.sampleRate * duration));
+    const size = Math.max(1, Math.floor(ctx.sampleRate * dur));
     const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < size; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / size);
     const src = ctx.createBufferSource();
     src.buffer = buffer;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(gainStart, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    src.connect(gain);
-    gain.connect(ctx.destination);
-    src.start();
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = cutoff;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    src.connect(lp); lp.connect(g); g.connect(this._out());
+    src.start(t0);
   }
 
-  // ---- เสียงประจำเหตุการณ์ ----
+  // ---- เสียงประจำเหตุการณ์ (คำศัพท์: tick / clunk / impact / shimmer) ----
 
-  /** แตะเลือกช่อง */
-  select() { this.tone(520, 0.05, 'square', 0.08); }
+  /** แตะเลือกช่อง — "tick" กลไกเบาๆ */
+  select() {
+    this.voice({ freq: 620, dur: 0.05, type: 'triangle', gain: 0.06, cutoff: 2200, attack: 0.004 });
+  }
 
-  /** สลับ 2 ช่อง */
-  swap() { this.tone(440, 0.08, 'triangle', 0.14); }
+  /** สลับ 2 ช่อง — "light clunk" ทุ้มอุ่น + เสียดสีเบา */
+  swap() {
+    this.voice({ freq: 300, dur: 0.10, type: 'sine', gain: 0.16, glideTo: 210, cutoff: 1200 });
+    this.noise(0.05, 0.05, 900);
+  }
 
-  /** สลับแล้วไม่เกิด match → สลับกลับ */
-  invalid() { this.tone(160, 0.14, 'square', 0.1); }
+  /** สลับแล้วไม่ match → "unh" ทุ้มลงต่ำนุ่มๆ (ปฏิเสธแบบไม่บาดหู ไม่ใช่ buzzer) */
+  invalid() {
+    this.voice({ freq: 240, dur: 0.14, type: 'sine', gain: 0.14, glideTo: 150, cutoff: 900 });
+    this.voice({ freq: 200, dur: 0.16, type: 'triangle', gain: 0.06, glideTo: 130, cutoff: 800, when: 0.05 });
+  }
 
-  /** ลูกกวาดแตก 1 สเต็ป — เสียงสูงขึ้นตามคอมโบ (chain) */
+  /** คริสตัลแตก 1 สเต็ป — ฉ่ำ/สะใจ แต่ยังอุ่น (lowpass คุมไม่บาดหู)
+   *  ชั้นเสียง: (1) รอยแตก transient (2) ตุบเบสน้ำหนัก (3) กระดิ่งคริสตัล
+   *  (4) ประกายฮาร์โมนิก major-third+octave เป็นเพย์ออฟ (5) คอมโบสูง = บานประกายอีกชั้น */
   pop(chain = 1) {
-    const freq = 300 + Math.min(chain - 1, 8) * 55;
-    this.tone(freq, 0.11, 'square', 0.16);
-    this.tone(freq * 1.5, 0.09, 'sine', 0.06, 0.02);
+    const step = Math.min(chain - 1, 8);
+    const base = 300 + step * 40;                        // ไต่พิตช์ตามคอมโบ (escalation)
+    // (1) รอยแตกคริสตัล — noise สั้นคม ยิ่งคอมโบยิ่งใส
+    this.noise(0.045, 0.13, 2600 + step * 420);
+    // (2) น้ำหนักการแตก — sub thump "ตุบ" ให้สะใจ
+    this.voice({ freq: 150, dur: 0.13, type: 'sine', gain: 0.17, glideTo: 80, cutoff: 700 });
+    // (3) ตัวกระดิ่งคริสตัล (body) อุ่น
+    this.voice({ freq: base, dur: 0.16, type: 'triangle', gain: 0.18, glideTo: base * 0.86, cutoff: base * 6 });
+    // (4) ประกายฮาร์โมนิก (5th + octave) — เพย์ออฟใสๆ ไม่บาดหู
+    this.voice({ freq: base * 1.5, dur: 0.20, type: 'sine', gain: 0.10, when: 0.02, cutoff: 6000, attack: 0.006 });
+    this.voice({ freq: base * 2, dur: 0.24, type: 'sine', gain: 0.06, when: 0.03, cutoff: 6000, attack: 0.010 });
+    // (5) คอมโบสูงบานประกายพิเศษอีกชั้น
+    if (chain >= 4) this.voice({ freq: base * 3, dur: 0.26, type: 'triangle', gain: 0.055, when: 0.05, cutoff: 6000, attack: 0.02 });
   }
 
-  /** ระเบิด 3x3 ทำงาน */
+  /** ระเบิด 3x3 — "heavy impact" ทุ้มหนัก + รัมเบิลกรองต่ำ (ไม่ใช่ระเบิดอาร์เคดแหลม) */
   bomb() {
-    this.tone(90, 0.28, 'sawtooth', 0.22);
-    this.noiseBurst(0.16, 0.18);
+    this.voice({ freq: 140, dur: 0.30, type: 'sine', gain: 0.24, glideTo: 55, cutoff: 700 });
+    this.noise(0.22, 0.16, 600);
+    this.voice({ freq: 90, dur: 0.34, type: 'triangle', gain: 0.10, glideTo: 45, cutoff: 500, when: 0.02 });
   }
 
-  /** ซูเปอร์โนวาทำงาน — คอร์ดไล่เสียงกว้าง */
+  /** ซูเปอร์โนวา — คริสตัลบานเป็นคอร์ดอุ่น + ประกายสูงค้างยาว (relaxing bloom ไม่ใช่แฟนแฟร์คาสิโน) */
   nova() {
-    [660, 880, 1100].forEach((f, i) => this.tone(f, 0.4, 'sine', 0.14, i * 0.035));
-    this.tone(1320, 0.5, 'triangle', 0.08, 0.07);
+    [523, 659, 784, 1047].forEach((f, i) =>            // C major bloom (root/3rd/5th/oct)
+      this.voice({ freq: f, dur: 0.55, type: 'sine', gain: 0.12, when: i * 0.045, attack: 0.02, cutoff: 5000 }));
+    this.voice({ freq: 1568, dur: 0.7, type: 'triangle', gain: 0.05, when: 0.10, attack: 0.05, cutoff: 6000 }); // shimmer ค้าง
+  }
+
+  /** เม็ดตกลงจอด/เครื่องขุดปล่อยเม็ด — "light clunk" กลไกเบาๆ (game feel: น้ำหนักการตก)
+   *  @param {number} n จำนวนจุดลงจอด — ยิ่งเยอะยิ่งหนักขึ้นนิด (คุมเพดานไว้) */
+  land(n = 1) {
+    const g = Math.min(0.14, 0.06 + n * 0.012);
+    this.voice({ freq: 190, dur: 0.09, type: 'sine', gain: g, glideTo: 120, cutoff: 900 });
+    this.noise(0.04, g * 0.4, 700);
   }
 }
