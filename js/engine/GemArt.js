@@ -324,13 +324,27 @@ export class GemArt {
       for (let x = 0; x < S; x++) {
         const dx = x - 15.5, dy = y - 15.5;
         const r = Math.hypot(dx, dy);
+        const lit = dx + dy;              // ทิศแสงบน-ซ้าย: ค่ายิ่งลบ = ยิ่งโดนแสง
         let col = null;
-        if (r <= 7.4) col = GemArt.OUTLINE;                            // ทรงกลมโลหะ
-        if (r <= 7.4 && dx + dy < -4) col = '#4a3a54';                 // ไฮไลต์โลหะ
-        const coreR = frame === 0 ? 3.4 : 5.0;                         // แกนแม็กม่าเต้น
-        if (r <= coreR) col = frame === 0 ? '#e0812a' : '#ffce54';
-        if (r <= coreR * 0.45) col = '#fff3c4';
-        const fx = x - 24, fy = y - 7;                                 // ประกายชนวน
+        if (r <= 7.9) {
+          // ลูกแก้วเงา: ไล่โทนตามมุมแสง (rim สว่างบน-ซ้าย → เนื้อ → เงาล่าง-ขวา)
+          col = '#2c1e26';                                   // เนื้อเข้ม
+          if (lit < -2) col = '#4c3a48';                     // ด้านรับแสง
+          if (lit < -6) col = '#75596c';                     // rim สว่าง
+          if (lit > 5) col = '#180f16';                      // เงาลึกล่าง-ขวา
+          if (r > 7.0) col = '#140c12';                      // ขอบมืดตัดทรงให้กลมคม
+        }
+        // แกนแม็กม่าเต้น + วงเรืองร้อนรอบแกน (สว่างขึ้น อ่านชัดบนเซ็ต glassy)
+        const coreR = frame === 0 ? 3.6 : 5.2;
+        if (r <= coreR + 1.4) col = frame === 0 ? '#c8641e' : '#ff9a2e'; // ฮาโลร้อน
+        if (r <= coreR) col = frame === 0 ? '#ff9e34' : '#ffd24e';       // แม็กม่า
+        if (r <= coreR * 0.5) col = '#fff6d2';                           // ใจกลางขาวร้อน
+        // สเปกคูลาร์แก้ว: จุดขาว/ไฮไลต์บน-ซ้าย ให้ผิวมันวาว
+        if (r <= 7.9) {
+          if (Math.hypot(dx + 3.4, dy + 3.4) <= 1.3) col = '#ffffff';
+          else if (Math.hypot(dx + 4.4, dy + 4.4) <= 1.0) col = '#e8d4ea';
+        }
+        const fx = x - 24, fy = y - 7;                                   // ประกายชนวน
         if (fx * fx + fy * fy <= (frame === 0 ? 1.6 : 3.4)) col = '#ffffff';
         grid[y][x] = col;
       }
@@ -344,19 +358,29 @@ export class GemArt {
    */
   static novaData(frame) {
     const S = GemArt.SPRITE;
+    // ดาว 8 แฉกหมุนวน + ขอบรุ้งพาสเทล — "อลังกว่าเจม" และแยกจากเจม Nova (4 แฉก) ชัดเจน
     const EDGE = ['#ffd1f0', '#c9e8ff', '#fff3c4'][frame];
     const MID = ['#f4a8d8', '#96c8f0', '#f2d886'][frame];
     const grid = [];
     for (let y = 0; y < S; y++) {
       grid[y] = [];
       for (let x = 0; x < S; x++) {
-        const ax = Math.abs(x - 15.5), ay = Math.abs(y - 15.5);
-        const m = ax + ay + 1.3 * Math.min(ax, ay);
+        const dx = x - 15.5, dy = y - 15.5;
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+        // แฉกหลัก 4 ทิศ (แนวแกน) — ยาว
+        const m1 = ax + ay + 1.3 * Math.min(ax, ay);
+        // แฉกรอง 4 ทิศ (แนวทแยง) — สั้นกว่า เกิดเป็น 8 แฉก
+        const u = (dx + dy) * 0.7071, v = (dx - dy) * 0.7071;
+        const au = Math.abs(u), av = Math.abs(v);
+        const m2 = au + av + 1.3 * Math.min(au, av);
         let col = null;
-        if (m <= 19) col = MID;
-        if (m <= 19 && m > 14.5) col = EDGE;
-        if (m <= 9) col = '#ffffff';
-        if ((Math.min(ax, ay) < 1.2 && Math.max(ax, ay) < 15) && m > 9) col = '#ffffff'; // สันแฉกขาว
+        if (m1 <= 19 || m2 <= 12.5) col = MID;
+        if ((m1 <= 19 && m1 > 14.5) || (m2 <= 12.5 && m2 > 9)) col = EDGE; // ขอบรุ้ง
+        const core = Math.min(m1, m2 + 3);
+        if (core <= 9) col = '#ffffff';
+        // สันแฉกขาวทั้งแนวแกนและแนวทแยง
+        if (col && ((Math.min(ax, ay) < 1.2 && Math.max(ax, ay) < 15 && m1 > 9) ||
+                    (Math.min(au, av) < 1.1 && Math.max(au, av) < 10 && m2 > 9))) col = '#ffffff';
         grid[y][x] = col;
       }
     }
