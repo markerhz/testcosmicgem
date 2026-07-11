@@ -146,11 +146,22 @@ export class Sfx {
     if (chain >= 4) this.voice({ freq: base * 3, dur: 0.26, type: 'triangle', gain: 0.055, when: 0.05, cutoff: 6000, attack: 0.02 });
   }
 
-  /** ระเบิด 3x3 — "heavy impact" ทุ้มหนัก + รัมเบิลกรองต่ำ (ไม่ใช่ระเบิดอาร์เคดแหลม) */
+  /** ระเบิด 3x3 — "ป๊อปตัวใหญ่": ยืม DNA ของ pop มาขยาย (แคร็กคม + ตุบพันช์ + กระดิ่งคริสตัล
+   *  + ประกายบานเป็นคอร์ดขึ้น) ให้สว่างสะใจ ไม่ตุ่นรัมเบิล แต่ยังหนักกว่า pop ชัดเจน */
   bomb() {
-    this.voice({ freq: 140, dur: 0.30, type: 'sine', gain: 0.24, glideTo: 55, cutoff: 700 });
-    this.noise(0.22, 0.16, 600);
-    this.voice({ freq: 90, dur: 0.34, type: 'triangle', gain: 0.10, glideTo: 45, cutoff: 500, when: 0.02 });
+    // แคร็กหัวระเบิดคมสว่าง (เหมือน pop แต่แรงกว่า)
+    this.noise(0.06, 0.22, 4200);
+    // ตุบเบสพันช์หนักแน่น (ไม่ยืดจนตุ่น)
+    this.voice({ freq: 190, dur: 0.20, type: 'sine', gain: 0.30, glideTo: 60, cutoff: 1100 });
+    // ตัวกระดิ่งคริสตัลใหญ่ (body แบบ pop)
+    this.voice({ freq: 300, dur: 0.20, type: 'triangle', gain: 0.22, glideTo: 250, cutoff: 2600 });
+    // ประกายบานเป็นคอร์ดไล่ขึ้น 3 โน้ต — เพย์ออฟสะใจแบบ pop
+    [400, 600, 900].forEach((f, i) =>
+      this.voice({ freq: f, dur: 0.26, type: 'sine', gain: 0.12, when: 0.02 + i * 0.02, cutoff: 6000, attack: 0.005 }));
+    // ประกายค้างสูง (shimmer tail) ให้ปลายฉ่ำ
+    this.voice({ freq: 1400, dur: 0.34, type: 'triangle', gain: 0.07, when: 0.08, cutoff: 6000, attack: 0.02 });
+    // หางน้ำหนักเบาๆ (ไม่ตุ่น)
+    this.noise(0.18, 0.09, 1000, 0.05);
   }
 
   /** ซูเปอร์โนวา — คริสตัลบานเป็นคอร์ดอุ่น + ประกายสูงค้างยาว (relaxing bloom ไม่ใช่แฟนแฟร์คาสิโน) */
