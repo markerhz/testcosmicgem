@@ -16,6 +16,8 @@ export class ScoreSystem {
   static BOMB_BONUS = 50;
   /** โบนัส chips ต่อโนวา 1 ดวงที่ทำงาน */
   static NOVA_BONUS = 100;
+  /** โบนัส chips ต่อลำแสงสว่าน (rocket) 1 ลำที่ทำงาน */
+  static ROCKET_BONUS = 40;
 
   constructor() {
     this.score = 0;      // คะแนนรอบปัจจุบัน (จะรีเซ็ตต่อด่านใน v0.3.0)
@@ -35,7 +37,8 @@ export class ScoreSystem {
   addMatchScore(clearedCells, context) {
     let chips = clearedCells.length * ScoreSystem.BASE_CHIPS
       + (context.bombs || 0) * ScoreSystem.BOMB_BONUS
-      + (context.novas || 0) * ScoreSystem.NOVA_BONUS;
+      + (context.novas || 0) * ScoreSystem.NOVA_BONUS
+      + (context.rockets || 0) * ScoreSystem.ROCKET_BONUS;
     let mult = 1 + (context.chain - 1) * ScoreSystem.CHAIN_MULT;
 
     // TODO v0.3.0: วน hook ของ Joker มาแก้ chips / mult ตรงนี้

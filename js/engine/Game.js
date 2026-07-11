@@ -236,7 +236,7 @@ export class Game {
     while (matches.length > 0) {
       const { clear, spawns } = this.matchSystem.planClears(matches, chain === startChain ? swapCell : null);
       const info = this.matchSystem.expandClears(clear);
-      await this.clearStep(clear, spawns, { chain, bombs: info.bombs, novas: info.novas });
+      await this.clearStep(clear, spawns, { chain, bombs: info.bombs, novas: info.novas, rockets: info.rockets });
       await this.dropAndRefill();
 
       matches = this.matchSystem.findMatches();
@@ -266,7 +266,7 @@ export class Game {
     // ตั้ง special ของโนวาเป็น null ก่อนขยาย — กันโนวาตัวเองยิงล้างสีสุ่มซ้ำ
     novaCell.candy.special = null;
     const info = this.matchSystem.expandClears(clear);
-    await this.clearStep(clear, [], { chain: 1, bombs: info.bombs, novas: info.novas + 1 });
+    await this.clearStep(clear, [], { chain: 1, bombs: info.bombs, novas: info.novas + 1, rockets: info.rockets });
     await this.dropAndRefill();
 
     // ต่อ cascade ตามปกติ (นับเป็นชั้น 2 ขึ้นไป)
@@ -287,13 +287,15 @@ export class Game {
     // เอฟเฟกต์เสียง + จอสั่น ตามลำดับความแรง: โนวา > ระเบิด > pop ธรรมดา
     this.sfx.pop(ctx.chain);
     if (ctx.bombs) this.sfx.bomb();
+    if (ctx.rockets) this.sfx.rocket();
     if (ctx.novas) this.sfx.nova();
-    const shakeMag = (ctx.novas ? 10 : 0) + (ctx.bombs ? 6 : 0) + Math.min(cells.length, 10) * 0.3;
+    const shakeMag = (ctx.novas ? 10 : 0) + (ctx.bombs ? 6 : 0) + (ctx.rockets ? 5 : 0) + Math.min(cells.length, 10) * 0.3;
     if (shakeMag > 0) this.effects.shake(shakeMag, 220);
 
     // hit-stop ตอนอิมแพกต์ใหญ่: โนวา > ระเบิด > คอมโบยาว
     if (ctx.novas) this.hitStop(90);
     else if (ctx.bombs) this.hitStop(60);
+    else if (ctx.rockets) this.hitStop(50);
     else if (ctx.chain >= 4) this.hitStop(45);
 
     // พาร์ติเคิลสีลูกกวาดตัวเอง — คอมโบสูง/ตัวพิเศษ = เยอะและแรงขึ้น
@@ -366,6 +368,8 @@ export class Game {
     }
     await Promise.all(tweens);
 
+    // เสียงลงจอดกลไกเบาๆ (game feel: น้ำหนักการตก) — ครั้งเดียวต่อคลื่น ไม่สแปม
+    if (dustAt.length) this.sfx.land(dustAt.length);
     // ฝุ่นเบาๆ ตรงจุดลงจอด (จำกัดจำนวนกันรก)
     for (const d of dustAt.slice(0, 8)) {
       this.effects.burst(d.x, d.y, '#cfd8ff', 3, Math.random, 0.45);

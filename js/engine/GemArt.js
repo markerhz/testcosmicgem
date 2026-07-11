@@ -387,6 +387,34 @@ export class GemArt {
     return grid;
   }
 
+  /**
+   * ชั้นลำแสงสว่าน (Drill Beam / rocket) วางทับเจม — บีมกากบาท + หัวลูกศร 4 ปลาย 2 เฟรม
+   * สื่อว่า "ล้างทั้งแถว+คอลัมน์" โทนพลังงานฟ้า-ขาว (แยกจากระเบิดอุ่น/โนวารุ้ง)
+   */
+  static rocketOverlayData(frame) {
+    const S = GemArt.SPRITE;
+    const CORE = '#ffffff';
+    const BEAM = frame === 0 ? '#8fecff' : '#c8f6ff';
+    const EDGE = '#2f9fd8';
+    const tip = frame === 0 ? 12 : 13.2;
+    const arrow = (along, perp) => along >= tip && along <= tip + 2.6 && perp <= (tip + 2.6 - along);
+    const grid = [];
+    for (let y = 0; y < S; y++) {
+      grid[y] = [];
+      for (let x = 0; x < S; x++) {
+        const dx = x - 15.5, dy = y - 15.5;
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+        let col = null;
+        if ((ay <= 2.5 && ax <= 14) || (ax <= 2.5 && ay <= 14)) col = EDGE;   // ขอบบีมเข้ม
+        if ((ay <= 1.5 && ax <= 14) || (ax <= 1.5 && ay <= 14)) col = BEAM;   // แกนบีมสว่าง
+        if (arrow(ax, ay) || arrow(ay, ax)) col = BEAM;                        // หัวลูกศร 4 ปลาย
+        if (Math.hypot(dx, dy) <= 2.7) col = CORE;                            // แกนกลางขาวร้อน
+        grid[y][x] = col;
+      }
+    }
+    return grid;
+  }
+
   // =====================================================
   // canvas ประกอบครั้งเดียว (ศูนย์ allocation ต่อเฟรม — คงจาก TASK-003)
   // =====================================================
@@ -423,6 +451,7 @@ export class GemArt {
     }
     this.bombOverlays = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.bombOverlayData(f)));
     this.novaFrames = [0, 1, 2].map((f) => GemArt.gridToCanvas(GemArt.novaData(f)));
+    this.rocketOverlays = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.rocketOverlayData(f)));
     this.glowSprites = GemArt.PALETTE.map((p) => GemArt.buildGlowSprite(p.m));
     this.novaGlow = GemArt.buildGlowSprite('#ffffff');
   }
@@ -475,6 +504,9 @@ export class GemArt {
     if (candy.special === 'bomb') {
       const frame = Math.floor(time / 250) % 2;
       ctx.drawImage(this.bombOverlays[frame], px, py, width, height);
+    } else if (candy.special === 'rocket') {
+      const frame = Math.floor(time / 220) % 2;
+      ctx.drawImage(this.rocketOverlays[frame], px, py, width, height);
     }
   }
 }

@@ -171,6 +171,13 @@ export class Sfx {
     this.voice({ freq: 1568, dur: 0.7, type: 'triangle', gain: 0.05, when: 0.10, attack: 0.05, cutoff: 6000 }); // shimmer ค้าง
   }
 
+  /** ลำแสงสว่าน (Drill Beam) — โทนกวาดขึ้น + ลมฟู่ + ประกายปลาย (พลังงาน ไม่ใช่เลเซอร์อาร์เคด) */
+  rocket() {
+    this.voice({ freq: 240, dur: 0.16, type: 'triangle', gain: 0.16, glideTo: 880, cutoff: 3200, attack: 0.006 });
+    this.noise(0.16, 0.12, 2400);
+    this.voice({ freq: 1000, dur: 0.20, type: 'sine', gain: 0.08, when: 0.05, cutoff: 6000, attack: 0.01 });
+  }
+
   /** เม็ดตกลงจอด/เครื่องขุดปล่อยเม็ด — "light clunk" กลไกเบาๆ (game feel: น้ำหนักการตก)
    *  @param {number} n จำนวนจุดลงจอด — ยิ่งเยอะยิ่งหนักขึ้นนิด (คุมเพดานไว้) */
   land(n = 1) {

@@ -83,13 +83,29 @@ export class MatchSystem {
   planClears(matches, swapCell = null) {
     const clear = new Set();
     const spawns = [];
+    const hCells = new Set(), vCells = new Set(), bigGroupCells = new Set();
     for (const g of matches) {
-      for (const cell of g.cells) clear.add(cell);
+      for (const cell of g.cells) {
+        clear.add(cell);
+        (g.orient === 'h' ? hCells : vCells).add(cell);
+        if (g.length >= 4) bigGroupCells.add(cell);
+      }
+    }
+    const usedSpot = new Set();
+    // เรียง 4 = 💣 ระเบิด | เรียง 5+ = 🌟 ซูเปอร์โนวา (คงพฤติกรรมเดิม)
+    for (const g of matches) {
       if (g.length >= 4) {
         let spot = g.cells[Math.floor(g.length / 2)];
         if (swapCell && g.cells.includes(swapCell)) spot = swapCell;
         spawns.push({ cell: spot, type: g.type, special: g.length >= 5 ? 'nova' : 'bomb' });
+        usedSpot.add(spot);
       }
+    }
+    // รูปตัว L/T (แนวนอน×แนวตั้งตัดกัน) = 🚀 Drill Beam ล้างทั้งแถว+คอลัมน์ (ประยุกต์จาก Shopee rocket)
+    for (const cell of hCells) {
+      if (!vCells.has(cell) || usedSpot.has(cell) || bigGroupCells.has(cell)) continue;
+      spawns.push({ cell, type: cell.candy.type, special: 'rocket' });
+      usedSpot.add(cell);
     }
     return { clear, spawns };
   }
@@ -102,7 +118,7 @@ export class MatchSystem {
    * @returns {{bombs:number, novas:number}} จำนวนตัวพิเศษที่ทำงานในสเต็ปนี้
    */
   expandClears(clear, rng = Math.random) {
-    let bombs = 0, novas = 0;
+    let bombs = 0, novas = 0, rockets = 0;
     const processed = new Set();
     let changed = true;
     while (changed) {
@@ -128,10 +144,19 @@ export class MatchSystem {
               clear.add(c); changed = true;
             }
           });
+        } else if (candy.special === 'rocket') {
+          rockets++;
+          const N = this.board.size;
+          for (let i = 0; i < N; i++) {
+            const a = this.board.getCell(i, cell.row);       // ทั้งแถว
+            if (a && a.candy && !clear.has(a)) { clear.add(a); changed = true; }
+            const b = this.board.getCell(cell.col, i);       // ทั้งคอลัมน์
+            if (b && b.candy && !clear.has(b)) { clear.add(b); changed = true; }
+          }
         }
       }
     }
-    return { bombs, novas };
+    return { bombs, novas, rockets };
   }
 
   /**
