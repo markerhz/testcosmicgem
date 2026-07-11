@@ -1,12 +1,29 @@
-/* 🕹️ สไตล์ 8-bit + CRT (แบบ Balatro) */
+/* 🛰️ UI ธีม "Tiny Universe" — แผงควบคุมยานอวกาศ (UI_GUIDE: copper / wood / glass / warm cream / amber)
+   ปรัชญา: หน้าจอเป็นของยาน ไม่ใช่เกมมือถือ — วัสดุอุ่น อนาล็อก หนักแน่น
+   Animation: ช้า หายใจ นุ่ม ไม่วูบวาบ (never flashy) */
+
+:root{
+  --cream:#f3e3c0;      /* Warm Cream — ตัวอักษรหลัก */
+  --cream-dim:#c9b28a;  /* cream หม่นสำหรับ label */
+  --copper:#c07a44;     /* Copper — ขอบ/บานพับ */
+  --copper-lo:#7c4a26;  /* copper เข้ม (ร่องเงา) */
+  --copper-hi:#e0a866;  /* copper รับแสง (ไฮไลต์ขอบ) */
+  --amber:#ffb43d;      /* Amber — ค่าตัวเลข/สถานะ */
+  --wood:#2a1c12;       /* ไม้เข้มพื้นแผง */
+  --wood-lo:#160e08;    /* ไม้เข้มสุด */
+  --glass:rgba(20,13,8,.66); /* กระจกฝ้าในช่องเกจ */
+  --danger:#a8433a;
+}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
+  /* ห้องโดยสารยาน: ไม้อุ่นหม่น + ไอแสงทองจากเพดาน + เส้นสแกนบางๆ ให้ฟีลจออนาล็อก */
   background:
-    repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 2px,transparent 2px 4px), /* เส้นสแกนทั้งหน้า */
-    radial-gradient(ellipse at 30% 10%,#1b1440 0%,#0b1020 55%,#05070f 100%);
-  color:#fff;
+    repeating-linear-gradient(0deg,rgba(0,0,0,.10) 0 2px,transparent 2px 4px),
+    radial-gradient(ellipse at 50% 8%,#3a2414 0%,#1d120a 52%,#0d0805 100%);
+  color:var(--cream);
   font-family:'Chakra Petch','Segoe UI',system-ui,Arial,sans-serif;
   text-align:center;
   overflow:hidden;
@@ -18,75 +35,111 @@ body{
   display:flex;flex-direction:column;align-items:center;
   height:100%;
 }
-/* ชื่อเกมฟอนต์พิกเซล (ตัวละตินเท่านั้น) — ข้อความไทยทั้งหมดใช้ Chakra Petch แทน
-   เพราะ Press Start 2P ไม่มีตัวอักษรไทย (fallback เป็นฟอนต์ระบบทำให้ดูโดดไม่เข้าธีม) */
+
+/* ป้ายชื่อยาน — ทองเหลืองสลักบนแผ่นทองแดง (ตัวละตินใช้ฟอนต์พิกเซล) */
 header h1{
   margin:10px 0 12px;
   font-family:'Press Start 2P','Courier New',monospace;
   font-size:.95em;letter-spacing:0;
-  color:#ffd84d;
-  text-shadow:3px 3px 0 #9c2033,6px 6px 0 #1a1030; /* เงาซ้อนชั้นแบบเรโทร */
+  color:var(--amber);
+  text-shadow:2px 2px 0 var(--copper-lo),4px 4px 0 var(--wood-lo);
 }
 header small{
   display:block;margin-top:8px;
-  font-size:.55em;color:#4da8ff;text-shadow:2px 2px 0 #1a1030;
+  font-size:.55em;color:var(--copper-hi);text-shadow:1px 1px 0 var(--wood-lo);
 }
-/* HUD คะแนนสไตล์ 8-bit ผสมพรีเมียม: กลุ่มพาเนลมนโปร่งแสง (④ HUD Redesign) */
+
+/* HUD: บานทองแดงมนหนา + ช่องกระจกฝ้าฝัง — เหมือนมาตรวัดแรงดันบนยาน */
 #hud{display:flex;gap:10px;margin:0 0 10px;justify-content:center;align-items:stretch}
 .hud-group{
   display:flex;gap:0;
-  background:rgba(26,16,48,.72);
-  border:3px solid #7b5cff;
-  border-radius:10px;
-  box-shadow:4px 4px 0 rgba(0,0,0,.4);
+  background:linear-gradient(180deg,#33210f,#1c1108);
+  border:3px solid var(--copper);
+  border-radius:14px;
+  box-shadow:
+    inset 0 1px 0 var(--copper-hi),
+    inset 0 -3px 8px rgba(0,0,0,.55),
+    3px 4px 0 rgba(0,0,0,.4);
   overflow:hidden;
-  backdrop-filter:blur(2px);
+  animation:breathe 6.5s ease-in-out infinite; /* หายใจช้าๆ ไม่วูบวาบ */
 }
 .hud-box{
   display:flex;align-items:center;gap:8px;
-  padding:6px 14px;min-width:96px;
+  padding:7px 15px;min-width:98px;
+  background:var(--glass);
 }
-.hud-group .hud-box+.hud-box{border-left:2px solid rgba(123,92,255,.5)}
-.hud-icon{font-size:1.1em;line-height:1}
+.hud-group .hud-box+.hud-box{border-left:2px solid var(--copper-lo)}
+.hud-icon{font-size:1.05em;line-height:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.5))}
 .hud-text{display:flex;flex-direction:column;align-items:flex-start}
 .hud-label{
   display:block;
   font-family:'Chakra Petch','Courier New',monospace;
   font-weight:600;
-  font-size:.62em;color:#9db4ff;margin-bottom:3px;letter-spacing:.03em;
+  font-size:.62em;color:var(--cream-dim);margin-bottom:3px;letter-spacing:.06em;
+  text-transform:uppercase;
 }
 .hud-value{
   font-family:'Press Start 2P','Courier New',monospace;
-  font-size:.8em;color:#fff;
+  font-size:.8em;color:var(--cream);
+  text-shadow:0 1px 0 rgba(0,0,0,.6);
 }
-#mult.hot{color:#ffd84d;text-shadow:2px 2px 0 #9c2033}
+#mult.hot{color:var(--amber);text-shadow:0 0 8px rgba(255,180,61,.6),0 1px 0 var(--copper-lo)}
+
+/* ปุ่มกลไก มน อุ่น — กดแล้วยุบจริง */
 .hud-btn{
   min-width:auto;display:flex;align-items:center;justify-content:center;
-  padding:0 14px;
-  background:rgba(26,16,48,.72);
-  border:3px solid #7b5cff;
-  border-radius:10px;
-  box-shadow:4px 4px 0 rgba(0,0,0,.4);
-  font-size:1.2em;cursor:pointer;color:#fff;
+  padding:0 15px;
+  background:linear-gradient(180deg,#3a2410,#20130a);
+  border:3px solid var(--copper);
+  border-radius:14px;
+  box-shadow:
+    inset 0 1px 0 var(--copper-hi),
+    inset 0 -3px 7px rgba(0,0,0,.5),
+    3px 4px 0 rgba(0,0,0,.4);
+  font-size:1.2em;cursor:pointer;color:var(--cream);
   font-family:inherit;
-  backdrop-filter:blur(2px);
 }
-.hud-btn:active{box-shadow:2px 2px 0 rgba(0,0,0,.45);transform:translate(2px,2px)}
-.hud-btn.muted{opacity:.55}
+.hud-btn:active{
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.6);
+  transform:translate(2px,3px);
+}
+.hud-btn.muted{opacity:.5;filter:grayscale(.4)}
+
+/* canvas: กรอบทองเหลืองหนา = พอร์ตโฮลกระจกหนาของเครื่องขุดคริสตัล */
 canvas{
-  border:4px solid #1a1030;
-  outline:4px solid #7b5cff;   /* ขอบซ้อน 2 ชั้นแบบพิกเซล */
-  border-radius:0;             /* 8-bit ไม่มีมุมโค้ง */
+  border:6px solid var(--copper);
+  border-radius:16px;
   background:#0a0e1e;
   display:block;
-  image-rendering:pixelated;   /* สำคัญ: ขยายภาพแบบไม่เกลี่ยพิกเซล */
+  image-rendering:pixelated;
   image-rendering:crisp-edges;
-  box-shadow:8px 8px 0 rgba(0,0,0,.45); /* เงาตันๆ ไม่ฟุ้ง */
+  box-shadow:
+    inset 0 0 0 2px var(--copper-lo),
+    0 0 0 3px var(--copper-hi),
+    0 0 22px rgba(255,180,61,.14),
+    8px 10px 0 rgba(0,0,0,.45);
   touch-action:none;
 }
+
+/* คำแนะนำ — โทนครีมหม่นบนผ้าใบ/หนัง */
 #hint{
   font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;
   font-weight:500;
-  font-size:.85em;opacity:.7;margin:14px 0;
-  text-shadow:1px 1px 0 #000;
+  font-size:.85em;color:var(--cream-dim);opacity:.85;margin:14px 0;
+  text-shadow:1px 1px 0 var(--wood-lo);
 }
+
+/* หายใจ: เรืองอุ่นรอบแผงเกจ ขึ้น-ลงช้ามาก (ART_BIBLE: soft breathing) */
+@keyframes breathe{
+  0%,100%{box-shadow:
+    inset 0 1px 0 var(--copper-hi),
+    inset 0 -3px 8px rgba(0,0,0,.55),
+    3px 4px 0 rgba(0,0,0,.4),
+    0 0 0 rgba(255,180,61,0);}
+  50%{box-shadow:
+    inset 0 1px 0 var(--copper-hi),
+    inset 0 -3px 8px rgba(0,0,0,.55),
+    3px 4px 0 rgba(0,0,0,.4),
+    0 0 14px rgba(255,180,61,.16);}
+}
+@media (prefers-reduced-motion:reduce){.hud-group{animation:none}}

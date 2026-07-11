@@ -38,15 +38,14 @@ export class GemArt {
    * จังหวะชีวิตต่อเจม — ลอยในอวกาศคนละจังหวะ (independent timing)
    *   floatAmp/floatSpeed — ลอยขึ้นลง (px logical / คาบ ms)
    *   glowSpeed           — ออร่าด้านหลังเต้น
-   *   orbitSpeed          — ประกายดาวโคจรรอบเม็ด (ms ต่อเรเดียน)
    */
   static ANIM = [
-    { floatAmp: 1.8, floatSpeed: 830, glowSpeed: 620, orbitSpeed: 940 },  // Ruby หนัก ลอยช้า
-    { floatAmp: 2.4, floatSpeed: 640, glowSpeed: 460, orbitSpeed: 700 },  // Nova เบา ระยิบเร็ว
-    { floatAmp: 1.6, floatSpeed: 920, glowSpeed: 700, orbitSpeed: 1080 }, // Emerald นิ่งสุขุม
-    { floatAmp: 2.1, floatSpeed: 720, glowSpeed: 540, orbitSpeed: 820 },  // Meteor พริ้ว
-    { floatAmp: 2.0, floatSpeed: 780, glowSpeed: 500, orbitSpeed: 760 },  // Nebula ไหลลอย
-    { floatAmp: 1.7, floatSpeed: 870, glowSpeed: 580, orbitSpeed: 1000 }, // Solar มั่นคง
+    { floatAmp: 1.8, floatSpeed: 830, glowSpeed: 620 },  // Ruby หนัก ลอยช้า
+    { floatAmp: 2.4, floatSpeed: 640, glowSpeed: 460 },  // Nova เบา ระยิบเร็ว
+    { floatAmp: 1.6, floatSpeed: 920, glowSpeed: 700 },  // Emerald นิ่งสุขุม
+    { floatAmp: 2.1, floatSpeed: 720, glowSpeed: 540 },  // Meteor พริ้ว
+    { floatAmp: 2.0, floatSpeed: 780, glowSpeed: 500 },  // Nebula ไหลลอย
+    { floatAmp: 1.7, floatSpeed: 870, glowSpeed: 580 },  // Solar มั่นคง
   ];
 
   constructor(cellSize, gap) {
@@ -393,18 +392,6 @@ export class GemArt {
     return c;
   }
 
-  /** ประกายดาวเล็ก (7x7 รูปบวก) โคจรรอบเจม — สร้างครั้งเดียว */
-  static buildSparkleSprite() {
-    const c = document.createElement('canvas');
-    c.width = 7; c.height = 7;
-    const g = c.getContext('2d');
-    g.fillStyle = 'rgba(255,255,255,0.55)';
-    g.fillRect(2, 3, 3, 1); g.fillRect(3, 2, 1, 3);
-    g.fillStyle = '#ffffff';
-    g.fillRect(0, 3, 7, 1); g.fillRect(3, 0, 1, 7);
-    return c;
-  }
-
   buildSprites() {
     this.sprites = [];
     for (let type = 0; type < GemArt.PALETTE.length; type++) {
@@ -414,7 +401,6 @@ export class GemArt {
     this.novaFrames = [0, 1, 2].map((f) => GemArt.gridToCanvas(GemArt.novaData(f)));
     this.glowSprites = GemArt.PALETTE.map((p) => GemArt.buildGlowSprite(p.m));
     this.novaGlow = GemArt.buildGlowSprite('#ffffff');
-    this.sparkle = GemArt.buildSparkleSprite();
   }
 
   get selectionGlow() {
@@ -422,7 +408,7 @@ export class GemArt {
   }
 
   // =====================================================
-  // วาดเจม 1 เม็ด — ลอยในอวกาศ + ออร่าวิ้งเต้น + ประกายดาวโคจร
+  // วาดเจม 1 เม็ด — ลอยในอวกาศ + ออร่าวิ้งเต้น
   // (คณิตล้วนต่อเฟรม ไม่มี allocation — คงมาตรฐาน TASK-003)
   // =====================================================
 
@@ -455,19 +441,6 @@ export class GemArt {
     ctx.globalAlpha = pulse;
     ctx.drawImage(glow, cx - glowSize / 2, cy - glowSize / 2, glowSize, glowSize);
     ctx.globalAlpha = 1;
-
-    // ประกายดาว 2 ดวงโคจรวงรีรอบเม็ด (อยู่หลังตัวเจม) — กะพริบเป็นจังหวะ
-    for (let k = 0; k < 2; k++) {
-      const blink = Math.sin((time + phase) / 210 + k * 2.4);
-      if (blink < 0.35) continue; // ติดๆ ดับๆ = วิ้ง
-      const ang = time / A.orbitSpeed + phase * 0.01 + k * Math.PI;
-      const sx = cx + Math.cos(ang) * base * 0.58;
-      const sy = cy + Math.sin(ang) * base * 0.40;
-      const ss = 7 * (0.7 + 0.3 * blink);
-      ctx.globalAlpha = blink;
-      ctx.drawImage(this.sparkle, sx - ss / 2, sy - ss / 2, ss, ss);
-      ctx.globalAlpha = 1;
-    }
 
     if (candy.special === 'nova') {
       const frame = Math.floor(time / 150) % 3;
