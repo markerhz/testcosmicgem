@@ -1,16 +1,19 @@
 /**
- * GemVerse — จุดเริ่มต้นของเกม
- * สร้าง Game + settings (ขับระบบเสียง) แล้วเริ่มลูปหลัก
+ * GemVerse — จุดเริ่มต้น
+ * สร้างเกม + settings(เสียง) + App(Splash → Command Room → เผยเกม)
  */
 import { Game } from './engine/Game.js';
 import { SettingsStore } from './systems/SettingsStore.js';
 import { applyAudioSettings } from './ui/AudioSettings.js';
+import { App } from './ui/App.js';
 
 const canvas = document.getElementById('game');
 const game = new Game(canvas);
 
-// เฟส 0: ค่าตั้งค่า (คงอยู่ข้ามครั้งเล่นผ่าน localStorage) ขับระดับเสียงจริง
 const settings = new SettingsStore(window.localStorage);
 applyAudioSettings(game.sfx, settings);
 
-game.start();
+game.start(); // เกมวาดอยู่ใต้ overlay
+
+const app = new App({ root: document.getElementById('scene-root'), game, sfx: game.sfx });
+app.start();

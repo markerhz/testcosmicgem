@@ -1,5 +1,20 @@
 # Changelog
 
+## 🚪 (v0.6 Phase 1) Splash + Command Room (static) — 2026-07-13
+
+### จอแรกของเกม (DOM/CSS scene ผูก SceneManager) — overlay ทับเกม ไม่แตะ logic
+- **SplashScene** — โลโก้ GEMVERSE + core หายใจ + "TAP TO START" (แตะ = ปลุก AudioContext แล้วเข้า Command Room)
+- **CommandRoomScene (static)** — เมนู diegetic: หน้าต่างยาน + Crystal Core + **EXPLORE** (เผยเกม), hotspot Event/Daily/Inbox · Crew/Shop/Settings (ยังเป็น toast "เร็วๆ นี้"), HUD currency placeholder
+- **App.js** — บูต SceneManager + คุม overlay `#scene-root`; EXPLORE = ซ่อน overlay + `renderer.resize()` เผยเกมที่รันอยู่ใต้
+- `css/scenes.css` (ใหม่), แก้ `index.html` (+scenes.css, +#scene-root), `main.js` (บูต App)
+- เกมรันอยู่ใต้ overlay ตั้งแต่ต้น → ถ้า scene พัง เกมยังเข้าถึงได้; ไม่แตะ Renderer/GemArt/Game logic
+- เทส **86 ผ่านหมด** (โมดูล UI ที่เทสได้ครอบใน SceneManager แล้ว; scene เป็น DOM glue)
+
+### หมายเหตุ
+- ยังไม่มี back/pause (เฟส 1 ต่อไป) — ตอนนี้ทางเดียว: Splash → Command Room → เกม
+- verify ภาพจริงต้องอัพขึ้น Pages ก่อน (แนบ preview HTML ให้เปิดดู flow ก่อนได้)
+
+
 ## 🔊 (v0.6 UI foundation) Phase 0 จบ — AudioBus + wire settings→เสียง — 2026-07-13
 
 ### เสียงแยกบัส + ขับด้วย SettingsStore
