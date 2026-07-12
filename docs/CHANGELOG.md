@@ -1,5 +1,18 @@
 # Changelog
 
+## 🔊 (v0.6 UI foundation) Phase 0 จบ — AudioBus + wire settings→เสียง — 2026-07-13
+
+### เสียงแยกบัส + ขับด้วย SettingsStore
+- **`Sfx` เพิ่มบัสแยกหมวด** (sfx / music / ambient) คั่นระหว่างเสียงกับ master — headroom ย้ายจาก master(0.9) ไปไว้ที่ sfxBus(0.9), master=1.0 → **ความดังรวมเท่าเดิมเป๊ะ**; เพิ่ม `setMuted/setSfxVolume/setMusicVolume/setAmbientVolume/applySettings`
+- **`js/ui/AudioSettings.js`** — `applyAudioSettings(audio, settings)` เชื่อม SettingsStore → เสียง (apply ตอนเริ่ม + subscribe เมื่อค่าเปลี่ยน); เป็นฟังก์ชัน pure เทสด้วย fake audio ได้
+- **`js/main.js`** — สร้าง `SettingsStore(localStorage)` + `applyAudioSettings(game.sfx, settings)` → ตั้งค่าเสียงคงอยู่ข้ามครั้งเล่นและขับเสียงจริง (แก้ entry อย่างเดียว, additive)
+- เทสโต **81 → 86 ผ่านหมด** (+5: AudioSettings)
+
+### สรุปเฟส 0 (ครบ)
+SceneManager · SettingsStore (+first-launch) · AudioBus · wire settings→เสียง — ฐานรากพร้อมสำหรับเฟส 1 (Splash → Command Room → Pause/Victory/Defeat/Reward). ยังไม่แตะ gameplay/Renderer/GemArt; แตะ main.js/Sfx.js แบบ additive คงพฤติกรรมเดิม
+- ⚠️ mute button เดิมยังเรียก `sfx.toggleMute()` ตรงๆ — จะ route ผ่าน settings ตอนทำจอ Settings/Options (เฟส 4)
+
+
 ## 🧭 (v0.6 UI foundation) Phase 0 — SceneManager + SettingsStore — 2026-07-13
 
 ### ฐานราก UI (จาก UI/UX Roadmap เฟส 0) — ยังไม่แตะ gameplay/Renderer/Game เดิม

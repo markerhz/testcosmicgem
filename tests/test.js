@@ -10,6 +10,7 @@ import { ScoreSystem } from '../js/systems/ScoreSystem.js';
 import { Effects } from '../js/engine/Effects.js';
 import { SceneManager } from '../js/ui/SceneManager.js';
 import { SettingsStore } from '../js/systems/SettingsStore.js';
+import { applyAudioSettings } from '../js/ui/AudioSettings.js';
 
 let pass = 0, fail = 0;
 function ok(cond, name) {
@@ -484,6 +485,23 @@ console.log('--- เฟส 0: SettingsStore ---');
   ok(b.get('sfxVol') === 0.5 && b.get('lang') === 'en', 'persist: โหลด store ใหม่จาก storage เดิมได้ค่าเดิม');
   b.reset();
   ok(b.get('sfxVol') === 0.9 && b.get('lang') === 'th', 'reset() คืนค่า default');
+}
+
+console.log('--- เฟส 0: AudioSettings (settings → เสียง) ---');
+{
+  const calls = [];
+  const fake = { setMuted: (b) => calls.push('m:' + b), setSfxVolume: (v) => calls.push('s:' + v), setMusicVolume: (v) => calls.push('mu:' + v) };
+  const st = new SettingsStore(null);
+  const un = applyAudioSettings(fake, st);
+  ok(calls.includes('m:false') && calls.includes('s:0.9') && calls.includes('mu:0.7'), 'apply เริ่มต้น: unmuted + sfx 0.9 + music 0.7');
+  calls.length = 0; st.set('sound', false);
+  ok(calls.includes('m:true'), 'ปิด sound → setMuted(true)');
+  calls.length = 0; st.set('sfxVol', 0.3);
+  ok(calls.includes('s:0.3'), 'เปลี่ยน sfxVol → setSfxVolume(0.3)');
+  calls.length = 0; st.set('music', false);
+  ok(calls.includes('mu:0'), 'ปิด music → musicVolume 0');
+  un(); calls.length = 0; st.set('sfxVol', 0.1);
+  ok(calls.length === 0, 'unsubscribe แล้วไม่ apply อีก');
 }
 
 console.log('\nผลรวม: ' + pass + ' ผ่าน, ' + fail + ' ไม่ผ่าน');

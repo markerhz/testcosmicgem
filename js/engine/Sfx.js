@@ -16,6 +16,14 @@ export class Sfx {
     this.ctx = null;
     /** @type {GainNode|null} มาสเตอร์ — คุมระดับรวมกันแตกเวลาเสียงซ้อน */
     this.master = null;
+    /** บัสแยกหมวด (สร้างพร้อม ctx): เอฟเฟกต์ / เพลง / บรรยากาศ */
+    this.sfxBus = null;
+    this.musicBus = null;
+    this.ambientBus = null;
+    // ระดับที่ตั้งไว้ (ใช้ตอนสร้างบัส + เมื่อ settings เปลี่ยน) — คงความดังเดิม: master 1.0 × sfx 0.9 = 0.9
+    this._sfxVol = 0.9;
+    this._musicVol = 0.7;
+    this._ambientVol = 0.6;
     this.muted = false;
   }
 
@@ -27,8 +35,14 @@ export class Sfx {
         if (!AC) return null;
         this.ctx = new AC();
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.9;
+        this.master.gain.value = 1.0;              // headroom ย้ายไปไว้ที่บัส sfx แทน (ความดังรวมเท่าเดิม)
         this.master.connect(this.ctx.destination);
+        this.sfxBus = this.ctx.createGain();       this.sfxBus.gain.value = this._sfxVol;
+        this.musicBus = this.ctx.createGain();     this.musicBus.gain.value = this._musicVol;
+        this.ambientBus = this.ctx.createGain();   this.ambientBus.gain.value = this._ambientVol;
+        this.sfxBus.connect(this.master);
+        this.musicBus.connect(this.master);
+        this.ambientBus.connect(this.master);
       }
       if (this.ctx.state === 'suspended') this.ctx.resume();
       return this.ctx;
@@ -43,7 +57,26 @@ export class Sfx {
   }
 
   /** ปลายทางของทุกเสียง (มาสเตอร์ถ้ามี ไม่งั้น destination) */
-  _out() { return this.master || this.ctx.destination; }
+  _out() { return this.sfxBus || this.master || this.ctx.destination; }
+
+  // ---- ควบคุมระดับ/ปิดเสียง (ให้ SettingsStore ขับผ่าน AudioSettings) ----
+  /** ปิด/เปิดเสียงทั้งหมด (SFX gate) */
+  setMuted(b) { this.muted = !!b; return this.muted; }
+  /** ระดับเอฟเฟกต์ 0..1 */
+  setSfxVolume(v) { this._sfxVol = v; if (this.sfxBus) this.sfxBus.gain.value = v; return v; }
+  /** ระดับเพลง 0..1 (0 = ปิดเพลง) */
+  setMusicVolume(v) { this._musicVol = v; if (this.musicBus) this.musicBus.gain.value = v; return v; }
+  /** ระดับบรรยากาศ 0..1 */
+  setAmbientVolume(v) { this._ambientVol = v; if (this.ambientBus) this.ambientBus.gain.value = v; return v; }
+  /** รับ settings ทั้งก้อน (จาก SettingsStore.all()) มาปรับทีเดียว */
+  applySettings(s) {
+    if (!s) return;
+    if (s.sound !== undefined) this.setMuted(!s.sound);
+    if (s.sfxVol !== undefined) this.setSfxVolume(s.sfxVol);
+    const mv = (s.music === false) ? 0 : (s.musicVol !== undefined ? s.musicVol : this._musicVol);
+    this.setMusicVolume(mv);
+    if (s.ambient === false) this.setAmbientVolume(0);
+  }
 
   /**
    * โทนอุ่น 1 เสียง: osc → lowpass → gain(attack/decay) → master
