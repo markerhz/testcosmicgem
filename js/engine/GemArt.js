@@ -430,40 +430,44 @@ export class GemArt {
   }
 
   /**
-   * ชั้นจรวดวางทับเจม — ลำตัวทรงกระบอก + จมูกแหลม + ครีบ 2 ข้าง + เปลวไฟท้าย 2 เฟรม (โทนเงิน-แดง)
-   * ใช้กับตัวพิเศษ AI ล่าเป้าหมาย (เดิมคือปลา — เปลี่ยนสกินตามคำขอ พฤติกรรมเดิมทุกอย่าง)
+   * ชั้น "Brass Probe" วางทับเจม — โดรนสำรวจทองแดง + เลนส์เซนเซอร์สแกน + เสาอากาศไฟกะพริบ + หมุดทองเหลือง (2 เฟรม)
+   * ใช้กับตัวพิเศษ AI ล่าเป้าหมาย (รีสกินจากจรวด/ปลา → analog-tech ตาม UI_GUIDE copper; พฤติกรรม/ชื่อ special เดิมทุกอย่าง)
    * @param {number} frame 0|1
    */
   static rocketOverlayData(frame) {
     const S = GemArt.SPRITE;
-    const HULL = '#e7ecf2';
-    const HULL_DARK = '#9aa6b4';
-    const NOSE = '#e0464f';
-    const WINDOW = '#7fd8ff';
-    const FLAME_A = frame === 0 ? '#ffd35c' : '#ff9a3c';
-    const FLAME_B = frame === 0 ? '#ff9a3c' : '#ffd35c';
+    const RIM = '#6e4020', BODY = '#b87838', LIT = '#e6b064', SHA = '#7c4a26';
+    const LENS = '#173042';
+    const GLOW = frame === 0 ? '#6fb8d8' : '#8fe0ff';   // เลนส์สแกนเต้นตามเฟรม
     const grid = [];
     for (let y = 0; y < S; y++) {
       grid[y] = [];
       for (let x = 0; x < S; x++) {
-        const dx = x - 16, dy = y - 15;
+        const dx = x - 15.5, dy = y - 14.5;   // เลื่อนตัวขึ้นเล็กน้อยให้มีที่เสาอากาศ
+        const r = Math.hypot(dx, dy);
         let col = null;
-        // ลำตัวทรงกระบอก (แนวตั้ง หัวชี้ขึ้น)
-        if (Math.abs(dx) <= 3.4 && dy >= -8 && dy <= 6) {
-          col = HULL;
-          if (dx > 1.2) col = HULL_DARK;
+        // เสาอากาศ + ไฟหัว (กะพริบตามเฟรม)
+        if (dy <= -8 && dy >= -12 && Math.abs(dx) < 0.9) col = RIM;
+        if (dy <= -11.5 && dy >= -12.9 && Math.abs(dx) < 1.7) col = frame === 0 ? '#c8923a' : '#ffd27a';
+        // ตัวโดรนกลม (ทิศแสงร่วมทั้งเซ็ต บน-ซ้าย)
+        if (r <= 8.0) {
+          col = BODY;
+          if (dx + dy < -2.5) col = LIT;
+          if (dx + dy > 3) col = SHA;
+          if (r > 7.0) col = RIM;
         }
-        // จมูกจรวด (กรวยแหลมด้านบน)
-        if (dy < -8 && dy >= -13 && Math.abs(dx) <= (dy + 13) * 0.68) col = NOSE;
-        // หน้าต่าง
-        if (Math.hypot(dx, dy + 1) <= 1.6) col = WINDOW;
-        if (Math.hypot(dx - 0.5, dy + 1.5) <= 0.6) col = '#ffffff';
-        // ครีบ 2 ข้างด้านล่าง
-        if (dy >= 3 && dy <= 7 && dx <= -3.4 && dx >= -3.4 - (dy - 3) * 1.1) col = HULL_DARK;
-        if (dy >= 3 && dy <= 7 && dx >= 3.4 && dx <= 3.4 + (dy - 3) * 1.1) col = HULL_DARK;
-        // เปลวไฟท้าย (แกว่งสีตามเฟรม)
-        if (dy > 6 && dy <= 11 && Math.abs(dx) <= (11 - dy) * 0.9) col = FLAME_A;
-        if (dy > 6 && dy <= 9 && Math.abs(dx) <= (9 - dy) * 0.7) col = FLAME_B;
+        // เลนส์เซนเซอร์กลาง (seeker) — เบ้าเข้ม + แสงสแกน + จุดขาว
+        if (r <= 3.6) {
+          col = LENS;
+          if (r <= 2.4) col = GLOW;
+          if (r <= 1.0) col = '#ffffff';
+        }
+        // หมุดทองเหลือง 4 จุดรอบตัว (handcrafted / brass fittings)
+        for (const [rx, ry] of [[-5.2, -2], [5.2, -2], [-5.2, 4.5], [5.2, 4.5]]) {
+          if (Math.hypot(dx - rx, dy - ry) <= 0.95) col = '#f0c078';
+        }
+        // ประกายมันวาวบน-ซ้าย
+        if (r <= 8.0 && Math.hypot(dx + 3.2, dy + 3.2) <= 1.0) col = '#fff2d6';
         grid[y][x] = col;
       }
     }
