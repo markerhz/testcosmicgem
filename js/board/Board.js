@@ -29,7 +29,8 @@ export class Board {
 
   /**
    * สุ่มลูกกวาดใหม่ทั้งกระดานแบบเลี่ยง match ตั้งต้น
-   * (ห้ามซ้ำกับ 2 ช่องทางซ้าย/บน) — ใช้ทั้งตอนเริ่มเกมและตอนสับกระดาน (reshuffle)
+   * (ห้ามซ้ำกับ 2 ช่องทางซ้าย/บน + ห้ามเกิดบล็อก 2x2 สีเดียวกัน — เข้าชุดกับ SquareDetector)
+   * ใช้ทั้งตอนเริ่มเกมและตอนสับกระดาน (reshuffle)
    */
   fillRandom() {
     for (let row = 0; row < this.size; row++) {
@@ -43,7 +44,11 @@ export class Board {
             this.grid[row][col - 2].candy.type === candy.type) ||
           (row >= 2 &&
             this.grid[row - 1][col].candy.type === candy.type &&
-            this.grid[row - 2][col].candy.type === candy.type)
+            this.grid[row - 2][col].candy.type === candy.type) ||
+          (col >= 1 && row >= 1 &&
+            this.grid[row][col - 1].candy.type === candy.type &&
+            this.grid[row - 1][col].candy.type === candy.type &&
+            this.grid[row - 1][col - 1].candy.type === candy.type)
         );
         this.grid[row][col].candy = candy;
       }

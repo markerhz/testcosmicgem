@@ -21,7 +21,7 @@ export class Candy {
     this.scaleX = 1;
     this.scaleY = 1;
 
-    // ชนิดพิเศษ (bomb / nova) — จะใช้งานจริงใน v0.2.x
+    // ชนิดพิเศษ (bomb / cometH / cometV / nova / rocket)
     this.special = null;
   }
 

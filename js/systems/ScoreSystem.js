@@ -16,8 +16,10 @@ export class ScoreSystem {
   static BOMB_BONUS = 50;
   /** โบนัส chips ต่อโนวา 1 ดวงที่ทำงาน */
   static NOVA_BONUS = 100;
-  /** โบนัส chips ต่อลำแสงสว่าน (rocket) 1 ลำที่ทำงาน */
-  static ROCKET_BONUS = 40;
+  /** โบนัส chips ต่อดาวหาง (comet) 1 ดวงที่ทำงาน */
+  static COMET_BONUS = 40;
+  /** โบนัส chips ต่อจรวด (rocket) 1 ลูกที่ทำงาน */
+  static ROCKET_BONUS = 60;
 
   constructor() {
     this.score = 0;      // คะแนนรอบปัจจุบัน (จะรีเซ็ตต่อด่านใน v0.3.0)
@@ -30,14 +32,15 @@ export class ScoreSystem {
   /**
    * คิดคะแนนจาก match 1 สเต็ปของ cascade
    * @param {import('../board/Cell.js').Cell[]} clearedCells ช่องที่แตกในสเต็ปนี้
-   * @param {{chain:number, bombs?:number, novas?:number}} context
-   *   chain = ลำดับชั้น cascade (เริ่มที่ 1), bombs/novas = ตัวพิเศษที่ทำงานในสเต็ปนี้
+   * @param {{chain:number, bombs?:number, novas?:number, comets?:number, rockets?:number}} context
+   *   chain = ลำดับชั้น cascade (เริ่มที่ 1), bombs/novas/comets/rockets = ตัวพิเศษที่ทำงานในสเต็ปนี้
    * @returns {{chips:number, mult:number, gained:number}}
    */
   addMatchScore(clearedCells, context) {
     let chips = clearedCells.length * ScoreSystem.BASE_CHIPS
       + (context.bombs || 0) * ScoreSystem.BOMB_BONUS
       + (context.novas || 0) * ScoreSystem.NOVA_BONUS
+      + (context.comets || 0) * ScoreSystem.COMET_BONUS
       + (context.rockets || 0) * ScoreSystem.ROCKET_BONUS;
     let mult = 1 + (context.chain - 1) * ScoreSystem.CHAIN_MULT;
 

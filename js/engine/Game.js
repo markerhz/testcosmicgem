@@ -243,7 +243,7 @@ export class Game {
     while (matches.length > 0) {
       const { clear, spawns } = this.matchSystem.planClears(matches, chain === startChain ? swapCell : null);
       const info = this.matchSystem.expandClears(clear);
-      await this.clearStep(clear, spawns, { chain, bombs: info.bombs, novas: info.novas, rockets: info.rockets });
+      await this.clearStep(clear, spawns, { chain, bombs: info.bombs, novas: info.novas, comets: info.comets, rockets: info.rockets });
       await this.dropAndRefill();
 
       matches = this.matchSystem.findMatches();
@@ -273,7 +273,7 @@ export class Game {
     // ตั้ง special ของโนวาเป็น null ก่อนขยาย — กันโนวาตัวเองยิงล้างสีสุ่มซ้ำ
     novaCell.candy.special = null;
     const info = this.matchSystem.expandClears(clear);
-    await this.clearStep(clear, [], { chain: 1, bombs: info.bombs, novas: info.novas + 1, rockets: info.rockets });
+    await this.clearStep(clear, [], { chain: 1, bombs: info.bombs, novas: info.novas + 1, comets: info.comets, rockets: info.rockets });
     await this.dropAndRefill();
 
     // ต่อ cascade ตามปกติ (นับเป็นชั้น 2 ขึ้นไป)
@@ -291,33 +291,59 @@ export class Game {
     const sp1 = a.candy && a.candy.special, sp2 = b.candy && b.candy.special;
     const both = sp1 && sp2;
     const isNova = sp1 === 'nova' || sp2 === 'nova';
-    const isRk = (s) => s === 'rocketH' || s === 'rocketV';
-    const rockets = [sp1, sp2].filter(isRk).length;
+    const isComet = (s) => s === 'cometH' || s === 'cometV';
+    const comets = [sp1, sp2].filter(isComet).length;
     const bombs = [sp1, sp2].filter((s) => s === 'bomb').length;
+    const rocketCount = [sp1, sp2].filter((s) => s === 'rocket').length;
     const pivot = b;
     const add = (c, r) => { const cc = this.board.getCell(c, r); if (cc && cc.candy) clear.add(cc); };
     const addRow = (r) => { for (let i = 0; i < N; i++) add(i, r); };
     const addCol = (c) => { for (let i = 0; i < N; i++) add(c, i); };
+    let rocketsFired = 0;
 
     if (both && isNova) {
-      // โนวา + ตัวพิเศษใดๆ = ล้างทั้งกระดาน
+      // โนวา + ตัวพิเศษใดๆ (รวมจรวด) = ล้างทั้งกระดาน
       this.board.forEachCell((c) => { if (c.candy) clear.add(c); });
     } else if (both && bombs === 2) {
       // ระเบิด + ระเบิด = 5x5
       for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) add(pivot.col + dc, pivot.row + dr);
-    } else if (both && rockets >= 1 && bombs >= 1) {
-      // จรวด + ระเบิด = 3 แถว + 3 คอลัมน์ (กากบาทหนา)
+    } else if (both && comets >= 1 && bombs >= 1) {
+      // ดาวหาง + ระเบิด = 3 แถว + 3 คอลัมน์ (กากบาทหนา)
       for (let d = -1; d <= 1; d++) { addRow(pivot.row + d); addCol(pivot.col + d); }
-    } else if (both && rockets === 2) {
-      // จรวด + จรวด = ล้างแถว + คอลัมน์ (กากบาทเต็ม)
+    } else if (both && comets === 2) {
+      // ดาวหาง + ดาวหาง = ล้างแถว + คอลัมน์ (กากบาทเต็ม)
       addRow(pivot.row); addCol(pivot.col);
+    } else if (both && rocketCount === 2) {
+      // จรวด + จรวด = ยิงจรวดล่าเป้าหมาย 5 ลูกทั่วกระดาน (ตาม AI priority เดิม)
+      this.matchSystem.launchRockets(5, pivot, clear);
+      rocketsFired = 5;
+    } else if (both && rocketCount >= 1 && comets >= 1) {
+      // จรวด + ดาวหาง = จรวดแปลงร่างยิงลำแสง 3 เป้าหมาย (สุ่มแถว/คอลัมน์ต่อเป้า)
+      for (let i = 0; i < 3; i++) {
+        const t = this.matchSystem.pickRocketTarget(pivot, clear);
+        if (!t) continue;
+        if (Math.random() < 0.5) addRow(t.row); else addCol(t.col);
+        rocketsFired++;
+      }
+    } else if (both && rocketCount >= 1 && bombs >= 1) {
+      // จรวด + ระเบิด = จรวดระเบิด 3 ลูก กระจายไปตามเป้าหมาย
+      for (let i = 0; i < 3; i++) {
+        const t = this.matchSystem.pickRocketTarget(pivot, clear);
+        if (!t) continue;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) add(t.col + dc, t.row + dr);
+        rocketsFired++;
+      }
     } else {
       // ตัวพิเศษเดี่ยว + เม็ดปกติ = จุดชนวนในที่
       const solo = sp1 ? a : b;
       const sp = solo.candy.special;
       if (sp === 'bomb') { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) add(solo.col + dc, solo.row + dr); }
-      else if (sp === 'rocketH') addRow(solo.row);
-      else if (sp === 'rocketV') addCol(solo.col);
+      else if (sp === 'cometH') addRow(solo.row);
+      else if (sp === 'cometV') addCol(solo.col);
+      else if (sp === 'rocket') {
+        const t = this.matchSystem.pickRocketTarget(solo, clear);
+        if (t) { clear.add(t); rocketsFired = 1; }
+      }
     }
     clear.add(a); clear.add(b);
     // ปิดสวิตช์ตัวพิเศษที่สลับ กันยิงซ้ำผิดตำแหน่ง (ตัวพิเศษอื่นในกองยังจุดชนวนต่อได้)
@@ -329,7 +355,8 @@ export class Game {
       chain: 1,
       bombs: bombs + info.bombs,
       novas: (isNova ? 1 : 0) + info.novas,
-      rockets: rockets + info.rockets,
+      comets: comets + info.comets,
+      rockets: rocketsFired + info.rockets,
     });
     await this.dropAndRefill();
     await this.resolveCascade(this.matchSystem.findMatches(), null, 2);
@@ -346,18 +373,20 @@ export class Game {
     const cells = Array.from(clear);
     const C = Renderer.CELL;
 
-    // เอฟเฟกต์เสียง + จอสั่น ตามลำดับความแรง: โนวา > ระเบิด > pop ธรรมดา
+    // เอฟเฟกต์เสียง + จอสั่น ตามลำดับความแรง: โนวา > ระเบิด > จรวด > pop ธรรมดา
     this.sfx.pop(ctx.chain);
     if (ctx.bombs) this.sfx.bomb();
+    if (ctx.comets) this.sfx.comet();
     if (ctx.rockets) this.sfx.rocket();
     if (ctx.novas) this.sfx.nova();
-    const shakeMag = (ctx.novas ? 10 : 0) + (ctx.bombs ? 6 : 0) + (ctx.rockets ? 5 : 0) + Math.min(cells.length, 10) * 0.3;
+    const shakeMag = (ctx.novas ? 10 : 0) + (ctx.bombs ? 6 : 0) + (ctx.comets ? 5 : 0) + (ctx.rockets ? 4 : 0) + Math.min(cells.length, 10) * 0.3;
     if (shakeMag > 0) this.effects.shake(shakeMag, 220);
 
-    // hit-stop ตอนอิมแพกต์ใหญ่: โนวา > ระเบิด > คอมโบยาว
+    // hit-stop ตอนอิมแพกต์ใหญ่: โนวา > ระเบิด > ดาวหาง > จรวด > คอมโบยาว
     if (ctx.novas) this.hitStop(90);
     else if (ctx.bombs) this.hitStop(60);
-    else if (ctx.rockets) this.hitStop(50);
+    else if (ctx.comets) this.hitStop(50);
+    else if (ctx.rockets) this.hitStop(40);
     else if (ctx.chain >= 4) this.hitStop(45);
 
     // พาร์ติเคิลสีลูกกวาดตัวเอง — คอมโบสูง/ตัวพิเศษ = เยอะและแรงขึ้น

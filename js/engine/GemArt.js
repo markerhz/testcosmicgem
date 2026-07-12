@@ -8,7 +8,7 @@
  *   - โครงต่อเจม: shape (ทรง) → facet (แสงต่อเหลี่ยม) → finish ร่วม → detail เฉพาะตัว
  *
  * สถาปัตยกรรมเดิมทุกประการ: Renderer → GemArt → Gem Drawing
- * interface เดิม: drawGem / selectionGlow / PALETTE / spriteData / bombOverlayData / novaData
+ * interface เดิม: drawGem / selectionGlow / PALETTE / spriteData / bombOverlayData / novaData / cometBeamData / rocketOverlayData
  * sprite sheet อนาคตแทนที่ buildSprites() จุดเดียว
  */
 export class GemArt {
@@ -388,16 +388,16 @@ export class GemArt {
   }
 
   /**
-   * ชั้นจรวด/ลำแสงสว่าน (Drill Beam) วางทับเจม — บีมทิศเดียว + หัวลูกศร 2 ปลาย 2 เฟรม
-   * vertical=false → บีมแนวนอน (ล้างแถว) | vertical=true → บีมแนวตั้ง (ล้างคอลัมน์)
-   * โทนพลังงานฟ้า-ขาว แยกจากระเบิดอุ่น/โนวารุ้ง
+   * ชั้นดาวหางวางทับเจม — บีมทิศเดียว + หัวดาวหางกลมเรืองแสง 2 ปลาย 2 เฟรม (แทนที่หัวลูกศรเดิม)
+   * vertical=false → พุ่งแนวนอน (ล้างแถว) | vertical=true → พุ่งแนวตั้ง (ล้างคอลัมน์)
+   * โทนพลังงานฟ้า-ขาว (ธีมดาวหางน้ำแข็ง) แยกจากระเบิดอุ่น/โนวารุ้ง/จรวดขาวเงิน
    */
-  static rocketBeamData(frame, vertical) {
+  static cometBeamData(frame, vertical) {
     const S = GemArt.SPRITE;
     const CORE = '#ffffff';
     const BEAM = frame === 0 ? '#8fecff' : '#c8f6ff';
     const EDGE = '#2f9fd8';
-    const tip = frame === 0 ? 12 : 13.2;
+    const headR = frame === 0 ? 3.4 : 3.9; // หัวดาวหางเต้นเบาๆ
     const grid = [];
     for (let y = 0; y < S; y++) {
       grid[y] = [];
@@ -407,10 +407,63 @@ export class GemArt {
         const b = vertical ? dx : dy;   // ตั้งฉากลำแสง
         const A = Math.abs(a), B = Math.abs(b);
         let col = null;
-        if (B <= 2.5 && A <= 14) col = EDGE;                                  // ขอบบีม
-        if (B <= 1.5 && A <= 14) col = BEAM;                                  // แกนบีม
-        if (A >= tip && A <= tip + 2.6 && B <= (tip + 2.6 - A)) col = BEAM;   // หัวลูกศร 2 ปลาย
-        if (Math.hypot(dx, dy) <= 2.7) col = CORE;                           // แกนกลางขาวร้อน
+        if (B <= 2.2 && A <= 12) col = EDGE;                                    // ขอบหาง
+        if (B <= 1.3 && A <= 12) col = BEAM;                                    // แกนหาง
+        // หัวดาวหางกลมเรืองแสงทั้ง 2 ปลาย + แฉกรัศมีเล็กๆ
+        for (const end of [-1, 1]) {
+          const hx = end * 13, hy = 0;
+          const ex = vertical ? hy : hx, ey = vertical ? hx : hy;
+          const hd = Math.hypot(dx - ex, dy - ey);
+          if (hd <= headR) col = BEAM;
+          if (hd <= headR - 1.3) col = CORE;
+          // แฉกรัศมี 4 ทิศรอบหัว
+          const rax = Math.abs(dx - ex), ray = Math.abs(dy - ey);
+          if ((rax < 0.9 && ray < headR + 2) || (ray < 0.9 && rax < headR + 2)) {
+            if (hd <= headR + 2) col = col || BEAM;
+          }
+        }
+        if (Math.hypot(dx, dy) <= 2.4) col = CORE;                             // แกนกลางขาวร้อน
+        grid[y][x] = col;
+      }
+    }
+    return grid;
+  }
+
+  /**
+   * ชั้นจรวดวางทับเจม — ลำตัวทรงกระบอก + จมูกแหลม + ครีบ 2 ข้าง + เปลวไฟท้าย 2 เฟรม (โทนเงิน-แดง)
+   * ใช้กับตัวพิเศษ AI ล่าเป้าหมาย (เดิมคือปลา — เปลี่ยนสกินตามคำขอ พฤติกรรมเดิมทุกอย่าง)
+   * @param {number} frame 0|1
+   */
+  static rocketOverlayData(frame) {
+    const S = GemArt.SPRITE;
+    const HULL = '#e7ecf2';
+    const HULL_DARK = '#9aa6b4';
+    const NOSE = '#e0464f';
+    const WINDOW = '#7fd8ff';
+    const FLAME_A = frame === 0 ? '#ffd35c' : '#ff9a3c';
+    const FLAME_B = frame === 0 ? '#ff9a3c' : '#ffd35c';
+    const grid = [];
+    for (let y = 0; y < S; y++) {
+      grid[y] = [];
+      for (let x = 0; x < S; x++) {
+        const dx = x - 16, dy = y - 15;
+        let col = null;
+        // ลำตัวทรงกระบอก (แนวตั้ง หัวชี้ขึ้น)
+        if (Math.abs(dx) <= 3.4 && dy >= -8 && dy <= 6) {
+          col = HULL;
+          if (dx > 1.2) col = HULL_DARK;
+        }
+        // จมูกจรวด (กรวยแหลมด้านบน)
+        if (dy < -8 && dy >= -13 && Math.abs(dx) <= (dy + 13) * 0.68) col = NOSE;
+        // หน้าต่าง
+        if (Math.hypot(dx, dy + 1) <= 1.6) col = WINDOW;
+        if (Math.hypot(dx - 0.5, dy + 1.5) <= 0.6) col = '#ffffff';
+        // ครีบ 2 ข้างด้านล่าง
+        if (dy >= 3 && dy <= 7 && dx <= -3.4 && dx >= -3.4 - (dy - 3) * 1.1) col = HULL_DARK;
+        if (dy >= 3 && dy <= 7 && dx >= 3.4 && dx <= 3.4 + (dy - 3) * 1.1) col = HULL_DARK;
+        // เปลวไฟท้าย (แกว่งสีตามเฟรม)
+        if (dy > 6 && dy <= 11 && Math.abs(dx) <= (11 - dy) * 0.9) col = FLAME_A;
+        if (dy > 6 && dy <= 9 && Math.abs(dx) <= (9 - dy) * 0.7) col = FLAME_B;
         grid[y][x] = col;
       }
     }
@@ -453,8 +506,9 @@ export class GemArt {
     }
     this.bombOverlays = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.bombOverlayData(f)));
     this.novaFrames = [0, 1, 2].map((f) => GemArt.gridToCanvas(GemArt.novaData(f)));
-    this.rocketH = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.rocketBeamData(f, false)));
-    this.rocketV = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.rocketBeamData(f, true)));
+    this.cometH = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.cometBeamData(f, false)));
+    this.cometV = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.cometBeamData(f, true)));
+    this.rocketOverlays = [0, 1].map((f) => GemArt.gridToCanvas(GemArt.rocketOverlayData(f)));
     this.glowSprites = GemArt.PALETTE.map((p) => GemArt.buildGlowSprite(p.m));
     this.novaGlow = GemArt.buildGlowSprite('#ffffff');
   }
@@ -507,12 +561,15 @@ export class GemArt {
     if (candy.special === 'bomb') {
       const frame = Math.floor(time / 250) % 2;
       ctx.drawImage(this.bombOverlays[frame], px, py, width, height);
-    } else if (candy.special === 'rocketH') {
+    } else if (candy.special === 'cometH') {
       const frame = Math.floor(time / 220) % 2;
-      ctx.drawImage(this.rocketH[frame], px, py, width, height);
-    } else if (candy.special === 'rocketV') {
+      ctx.drawImage(this.cometH[frame], px, py, width, height);
+    } else if (candy.special === 'cometV') {
       const frame = Math.floor(time / 220) % 2;
-      ctx.drawImage(this.rocketV[frame], px, py, width, height);
+      ctx.drawImage(this.cometV[frame], px, py, width, height);
+    } else if (candy.special === 'rocket') {
+      const frame = Math.floor(time / 260) % 2;
+      ctx.drawImage(this.rocketOverlays[frame], px, py, width, height);
     }
   }
 }

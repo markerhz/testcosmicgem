@@ -171,11 +171,18 @@ export class Sfx {
     this.voice({ freq: 1568, dur: 0.7, type: 'triangle', gain: 0.05, when: 0.10, attack: 0.05, cutoff: 6000 }); // shimmer ค้าง
   }
 
-  /** ลำแสงสว่าน (Drill Beam) — โทนกวาดขึ้น + ลมฟู่ + ประกายปลาย (พลังงาน ไม่ใช่เลเซอร์อาร์เคด) */
-  rocket() {
+  /** ดาวหาง (Comet Streak) — โทนกวาดขึ้น + ลมฟู่ + ประกายปลาย (พลังงาน ไม่ใช่เลเซอร์อาร์เคด) */
+  comet() {
     this.voice({ freq: 240, dur: 0.16, type: 'triangle', gain: 0.16, glideTo: 880, cutoff: 3200, attack: 0.006 });
     this.noise(0.16, 0.12, 2400);
     this.voice({ freq: 1000, dur: 0.20, type: 'sine', gain: 0.08, when: 0.05, cutoff: 6000, attack: 0.01 });
+  }
+
+  /** จรวด (ล่าเป้าหมาย) — จุดชนวน + ทะยานขึ้น + กระแทกเบาตอนพุ่งชนเป้า */
+  rocket() {
+    this.noise(0.05, 0.10, 2600, 0);          // ประกายจุดชนวน
+    this.voice({ freq: 260, dur: 0.14, type: 'sawtooth', gain: 0.13, glideTo: 620, cutoff: 2200, attack: 0.008, when: 0.01 });
+    this.voice({ freq: 520, dur: 0.09, type: 'triangle', gain: 0.09, when: 0.11, cutoff: 3000 }); // กระแทกตอนถึงเป้า
   }
 
   /** เม็ดตกลงจอด/เครื่องขุดปล่อยเม็ด — "light clunk" กลไกเบาๆ (game feel: น้ำหนักการตก)
