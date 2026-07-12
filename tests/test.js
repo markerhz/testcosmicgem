@@ -8,6 +8,8 @@ import { MatchSystem } from '../js/systems/MatchSystem.js';
 import { GravitySystem } from '../js/systems/GravitySystem.js';
 import { ScoreSystem } from '../js/systems/ScoreSystem.js';
 import { Effects } from '../js/engine/Effects.js';
+import { SceneManager } from '../js/ui/SceneManager.js';
+import { SettingsStore } from '../js/systems/SettingsStore.js';
 
 let pass = 0, fail = 0;
 function ok(cond, name) {
@@ -437,6 +439,51 @@ console.log('--- GemArt: ทรงเจมเอกลักษณ์ (TASK-004
 
   ok(GemArt.PROFILES.length === 6 && GemArt.PROFILES.every((p) => typeof p.shape === 'function'),
     'ทุกเจมมี rendering profile ของตัวเอง (shape function ครบ 6)');
+}
+
+console.log('--- เฟส 0: SceneManager ---');
+{
+  const log = [];
+  const mk = (id) => ({ enter: (p) => log.push('enter:' + id + ':' + (p && p.n || '')), exit: () => log.push('exit:' + id) });
+  const sm = new SceneManager();
+  sm.register('splash', mk('splash')).register('menu', mk('menu')).register('map', mk('map'));
+  sm.go('splash');
+  ok(sm.currentId() === 'splash' && log[0] === 'enter:splash:', 'go() เข้า scene แรก + เรียก enter');
+  sm.go('menu', { n: 7 });
+  ok(sm.currentId() === 'menu' && sm.depth() === 1, 'go() ดันประวัติ (depth=1)');
+  ok(log.includes('exit:splash') && log.includes('enter:menu:7'), 'สลับจอ: exit เดิม + enter ใหม่พร้อม params');
+  sm.back();
+  ok(sm.currentId() === 'splash' && sm.depth() === 0, 'back() คืนจอก่อนหน้า + ลดประวัติ');
+  sm.replace('map');
+  ok(sm.currentId() === 'map' && sm.depth() === 0, 'replace() ไม่เก็บประวัติ');
+  ok(sm.back() === null, 'back() ตอนไม่มีประวัติ → null');
+  let threw = false; try { sm.go('nope'); } catch { threw = true; }
+  ok(threw, 'go() scene ที่ไม่รู้จัก → โยน error');
+}
+
+console.log('--- เฟส 0: SettingsStore ---');
+{
+  const mkStorage = () => { const m = new Map(); return { getItem: (k) => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, v), _m: m }; };
+  const st = new SettingsStore(null);
+  ok(st.get('sound') === true && st.get('lang') === 'th', 'ค่า default ถูกต้อง');
+  ok(st.isFirstLaunch() === true, 'ครั้งแรก: isFirstLaunch = true');
+  st.markTutorialDone();
+  ok(st.isFirstLaunch() === false, 'หลัง markTutorialDone → false');
+  let got = null; const un = st.subscribe((k, v) => { got = k + '=' + v; });
+  st.set('reducedMotion', true);
+  ok(got === 'reducedMotion=true', 'subscribe รับ event เมื่อ set');
+  un(); st.set('haptics', false);
+  ok(got === 'reducedMotion=true', 'unsubscribe แล้วไม่รับ event อีก');
+  let threw2 = false; try { st.set('unknownKey', 1); } catch { threw2 = true; }
+  ok(threw2, 'set คีย์ไม่รู้จัก → โยน error');
+  // persistence
+  const storage = mkStorage();
+  const a = new SettingsStore(storage);
+  a.set('sfxVol', 0.5); a.set('lang', 'en');
+  const b = new SettingsStore(storage);
+  ok(b.get('sfxVol') === 0.5 && b.get('lang') === 'en', 'persist: โหลด store ใหม่จาก storage เดิมได้ค่าเดิม');
+  b.reset();
+  ok(b.get('sfxVol') === 0.9 && b.get('lang') === 'th', 'reset() คืนค่า default');
 }
 
 console.log('\nผลรวม: ' + pass + ' ผ่าน, ' + fail + ' ไม่ผ่าน');

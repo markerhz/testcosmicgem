@@ -1,5 +1,14 @@
 # Changelog
 
+## 🧭 (v0.6 UI foundation) Phase 0 — SceneManager + SettingsStore — 2026-07-13
+
+### ฐานราก UI (จาก UI/UX Roadmap เฟส 0) — ยังไม่แตะ gameplay/Renderer/Game เดิม
+- **`js/ui/SceneManager.js`** — สลับจอ + ประวัติย้อนกลับ (register / go / replace / back / clearHistory) + lifecycle `enter(params)`/`exit()`. core ลอจิกล้วน ไม่ผูก DOM (scene จัดการ DOM เองใน enter/exit) → เทสใน Node ได้
+- **`js/systems/SettingsStore.js`** — แหล่งความจริงเดียวของ settings (sound/music/ambient/sfxVol/musicVol/reducedMotion/haptics/lang) + **first-launch flag** (`isFirstLaunch`/`markTutorialDone`). storage ฉีดได้ (localStorage/stub), get/set/toggle/subscribe/reset/persist
+- เทสโต **66 → 81 ผ่านหมด** (+15: SceneManager 7, SettingsStore 8)
+- ยังไม่ wire เข้าเกม (เจตนา) — ไม่มีความเสี่ยงต่อบิลด์ที่รันอยู่ ; ถัดไป: AudioBus + wire settings→Sfx + สร้าง scene จริงจอแรก (Splash)
+
+
 ## 🛰️ (v0.6 preview) rocket reskin → Brass Probe (สรุปเลือกจาก 3 ตัวเลือก) — 2026-07-13
 
 ### ตัวพิเศษ AI ล่าเป้า: จรวดการ์ตูน → โดรนสำรวจทองแดง
