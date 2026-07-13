@@ -1,59 +1,43 @@
 /**
- * CommandRoomScene — เมนูหลัก "ห้องบังคับการยาน" (เวอร์ชัน static เฟส 1)
- * โต้ตอบวัตถุในยานแทนปุ่มเมนู: Crystal Core = EXPLORE, หน้าต่าง/หุ่น/ลัง/คอนโซล = ทางเข้าโหมด
- * เฟส 1: ทำโครง + EXPLORE ใช้ได้จริง (เผยเกม), hotspot อื่น = แจ้ง "เร็วๆ นี้" (toast)
+ * CommandRoomScene — เมนูหลัก "ห้องบังคับการยาน" (art เนี้ยบ, static เฟส 1)
+ * Crystal Core = EXPLORE (เผยเกม) ; hotspot อื่น = toast "เร็วๆ นี้"
  */
-export function createCommandRoomScene({ root, sfx, onExplore, onHotspot }) {
-  let el = null;
-  const tick = () => { if (sfx && sfx.select) sfx.select(); };
+export function createCommandRoomScene({ mount, sfx, onExplore }) {
+  let toastTid = 0;
+  const obj = (id, icon, label, led) =>
+    '<div class="obj" data-id="' + id + '">' + icon + '<span>' + label + '</span>' + (led ? '<i class="led"></i>' : '') + '</div>';
   return {
     enter() {
-      root.style.display = 'block';
-      el = document.createElement('div');
-      el.className = 'scene scene-command';
-      el.innerHTML =
-        '<div class="cr-hud">' +
-          '<span class="cr-chip">❤ 5</span>' +
-          '<span class="cr-chip">◆ 1,250</span>' +
-          '<span class="cr-chip">⦿ 25,300</span>' +
-        '</div>' +
-        '<div class="cr-stage">' +
-          '<div class="cr-window"><div class="sky"></div>' +
-            '<div class="cr-bubble">Ready for another mission?</div>' +
-            '<div class="cr-core"></div>' +
+      mount.innerHTML =
+        '<div class="command">' +
+          '<div class="cr-hud"><span class="chip">❤ <b>5</b></span><span class="chip">◆ <b>1,250</b></span><span class="chip">⦿ <b>25,300</b></span></div>' +
+          '<div class="win">' +
+            '<div class="stars"></div>' +
+            '<span class="rivet" style="left:16px;top:122px"></span><span class="rivet" style="right:16px;top:122px"></span>' +
+            '<span class="rivet" style="left:34px;top:46px"></span><span class="rivet" style="right:34px;top:46px"></span>' +
+            '<div class="planet"></div>' +
+            '<div class="bubble">Ready for another mission?</div>' +
+            '<div class="dais"></div>' +
+            '<div class="crystal"><div class="halo"></div><div class="body"></div><div class="fl"></div><div class="sh"></div><div class="sp"></div></div>' +
           '</div>' +
-          '<div class="cr-left">' +
-            '<button class="hot" data-id="event">🎁<span>Event</span></button>' +
-            '<button class="hot" data-id="daily">📅<span>Daily</span></button>' +
-            '<button class="hot" data-id="inbox">✉<span>Inbox</span></button>' +
+          '<div class="rows">' +
+            '<div class="col">' + obj('event','🎁','Event',true) + obj('daily','📅','Daily',false) + obj('inbox','✉','Inbox',false) + '</div>' +
+            '<div class="col">' + obj('crew','🤖','Crew',false) + obj('shop','📦','Shop',true) + obj('settings','⚙','Settings',false) + '</div>' +
           '</div>' +
-          '<div class="cr-right">' +
-            '<button class="hot" data-id="crew">🤖<span>Crew</span></button>' +
-            '<button class="hot" data-id="shop">📦<span>Shop</span></button>' +
-            '<button class="hot" data-id="settings">⚙<span>Settings</span></button>' +
-          '</div>' +
-        '</div>' +
-        '<button class="cr-explore">🚀 EXPLORE</button>' +
-        '<div class="cr-toast" hidden></div>';
-      root.appendChild(el);
-
-      el.querySelector('.cr-explore').addEventListener('click', () => {
-        if (sfx && sfx.nova) sfx.nova();
-        onExplore();
-      });
-      el.querySelectorAll('.hot').forEach((b) => {
-        b.addEventListener('click', () => {
-          tick();
-          const id = b.getAttribute('data-id');
-          if (onHotspot) onHotspot(id);
-          const t = el.querySelector('.cr-toast');
-          t.textContent = id.toUpperCase() + ' — เร็วๆ นี้';
-          t.hidden = false;
-          clearTimeout(this._tid);
-          this._tid = setTimeout(() => { t.hidden = true; }, 1400);
-        });
-      });
+          '<button class="explore">🚀 EXPLORE</button>' +
+          '<div class="floor"><span>🪴</span><span>☕</span><span>🐈</span></div>' +
+          '<div class="rug"></div>' +
+          '<div class="toast" hidden></div>' +
+        '</div>';
+      const el = mount.querySelector('.command');
+      el.querySelector('.explore').addEventListener('click', () => { if (sfx && sfx.nova) sfx.nova(); onExplore(); });
+      el.querySelectorAll('.obj').forEach((b) => b.addEventListener('click', () => {
+        if (sfx && sfx.select) sfx.select();
+        const t = el.querySelector('.toast');
+        t.textContent = b.getAttribute('data-id').toUpperCase() + ' — เร็วๆ นี้';
+        t.hidden = false; clearTimeout(toastTid); toastTid = setTimeout(() => { t.hidden = true; }, 1400);
+      }));
     },
-    exit() { if (el) { el.remove(); el = null; } },
+    exit() { mount.innerHTML = ''; },
   };
 }

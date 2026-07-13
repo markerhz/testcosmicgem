@@ -1,62 +1,92 @@
-/* 🛰️ GemVerse — Scene overlays (Phase 1: Splash + Command Room)
-   ใช้โทเคนสีจาก style.css (:root) โหลดหลัง style.css */
-#scene-root{position:fixed;inset:0;z-index:100;display:none}
-.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  color:var(--cream);text-align:center;overflow:hidden;
-  background:radial-gradient(ellipse at 50% 12%,#2a1a3a 0%,#160e1e 50%,#0a0810 100%);}
-.scene .sky{position:absolute;inset:0;z-index:0;
+/* 🛰️ GemVerse — Scene overlays (Splash + Command Room) — polished art
+   scope: #scene-root ; ใช้โทเคนจาก style.css :root + เพิ่มเฉพาะที่นี่ */
+#scene-root{position:fixed;inset:0;z-index:100;display:none;
+  --brass:#d9a860;--copper-hi2:#e6b878;background:#05060c}
+#scene-root .wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#scene-root .frame{position:relative;width:min(430px,100%);height:100%;max-height:900px;overflow:hidden;font-family:'Chakra Petch',system-ui,sans-serif;color:var(--cream)}
+
+/* deep space + layered nebulae (ต่อเนื่องข้ามจอ) */
+#scene-root .space{position:absolute;inset:0;z-index:0;
   background:
-    radial-gradient(1px 1px at 20% 30%,#fff,transparent),
-    radial-gradient(1px 1px at 70% 20%,#cbd,transparent),
-    radial-gradient(1px 1px at 40% 70%,#fff,transparent),
-    radial-gradient(2px 2px at 85% 60%,#fff,transparent),
-    radial-gradient(1px 1px at 60% 85%,#ace,transparent),
-    radial-gradient(ellipse at 50% 46%,rgba(255,180,90,.12),transparent 60%);
-  background-repeat:no-repeat;opacity:.9}
+   radial-gradient(120% 80% at 50% -10%,#2b1c46 0%,#180f2c 34%,#0a0714 66%,#05060c 100%),
+   radial-gradient(60% 40% at 22% 30%,rgba(123,92,255,.28),transparent 60%),
+   radial-gradient(50% 34% at 80% 24%,rgba(77,168,255,.20),transparent 62%),
+   radial-gradient(46% 30% at 66% 74%,rgba(232,120,90,.16),transparent 60%)}
+#scene-root .stars,#scene-root .dust{position:absolute;inset:-20%}
+#scene-root .stars{background-image:
+   radial-gradient(1px 1px at 10% 20%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#dfe,transparent),
+   radial-gradient(1px 1px at 55% 15%,#fff,transparent),radial-gradient(1px 1px at 70% 50%,#cdf,transparent),
+   radial-gradient(2px 2px at 85% 80%,#fff,transparent),radial-gradient(1px 1px at 42% 88%,#fff,transparent),
+   radial-gradient(1px 1px at 92% 35%,#fed,transparent),radial-gradient(1px 1px at 18% 72%,#fff,transparent),
+   radial-gradient(2px 2px at 63% 34%,#fff,transparent);animation:twinkle 5s ease-in-out infinite}
+#scene-root .dust{background-image:radial-gradient(1px 1px at 20% 10%,rgba(255,220,170,.5),transparent),
+   radial-gradient(1px 1px at 60% 40%,rgba(255,220,170,.4),transparent),radial-gradient(1px 1px at 40% 80%,rgba(255,220,170,.35),transparent);
+   animation:drift 24s linear infinite}
+#scene-root .slot{position:absolute;inset:0;z-index:5}
+
+/* faceted glowing crystal */
+#scene-root .crystal{position:relative;width:88px;height:154px;filter:drop-shadow(0 0 26px rgba(176,120,255,.6))}
+#scene-root .crystal .halo{position:absolute;left:50%;top:50%;width:240px;height:240px;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(176,120,255,.34),transparent 62%);animation:pulse 4s ease-in-out infinite}
+#scene-root .crystal .body{position:absolute;inset:0;
+  background:linear-gradient(115deg,#efe0ff 0%,#c9a3f7 30%,#a45cec 55%,#7a3fd0 78%,#4f2a95 100%);
+  clip-path:polygon(50% 0,100% 34%,74% 100%,26% 100%,0 34%)}
+#scene-root .crystal .fl{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.30),transparent 55%);
+  clip-path:polygon(50% 0,50% 100%,26% 100%,0 34%)}
+#scene-root .crystal .sh{position:absolute;left:26%;top:9%;width:9px;height:46px;background:rgba(255,255,255,.85);transform:rotate(18deg);border-radius:6px;filter:blur(1px)}
+#scene-root .crystal .sp{position:absolute;left:50%;top:44%;width:8px;height:8px;margin:-4px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:orbit 6s linear infinite}
 
 /* ---------- SPLASH ---------- */
-.splash-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px}
-.core-mini{width:54px;height:96px;margin-bottom:8px;
-  background:linear-gradient(160deg,#cc9cfa,#a45cec 55%,#6c34ac);
-  clip-path:polygon(50% 0,100% 42%,50% 100%,0 42%);
-  filter:drop-shadow(0 0 16px rgba(164,92,236,.6));animation:breathe 4s ease-in-out infinite}
-.logo{font-family:'Press Start 2P','Courier New',monospace;font-size:2rem;margin:0;color:var(--amber);
-  text-shadow:3px 3px 0 var(--copper-lo),6px 6px 0 #160e08}
-.tagline{margin:2px 0 18px;color:var(--copper-hi);font-size:.9rem;letter-spacing:.05em}
-.prompt{font-family:'Press Start 2P',monospace;font-size:.8rem;color:var(--cream);animation:blink 1.6s ease-in-out infinite}
-.ver{position:absolute;bottom:-120px;color:var(--cream-dim);opacity:.6;font-size:.7rem}
+#scene-root .splash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#scene-root .logo{font-family:'Press Start 2P',monospace;font-size:2.1rem;margin:26px 0 0;
+  background:linear-gradient(180deg,#fff3c4,#ffb43d 60%,#e08a1e);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(2px 3px 0 #7c4a26) drop-shadow(4px 6px 0 rgba(0,0,0,.5))}
+#scene-root .tagline{color:var(--copper-hi);letter-spacing:.14em;font-size:.82rem;margin:12px 0 0;text-transform:uppercase}
+#scene-root .prompt{font-family:'Press Start 2P',monospace;font-size:.72rem;margin-top:60px;padding:12px 22px;
+  border:2px solid var(--copper);border-radius:30px;background:rgba(30,18,10,.45);box-shadow:0 0 18px rgba(255,180,61,.15);animation:blink 1.6s ease-in-out infinite}
+#scene-root .ver{position:absolute;bottom:22px;color:var(--cream-dim);opacity:.55;font-size:.7rem}
 
 /* ---------- COMMAND ROOM ---------- */
-.scene-command{justify-content:flex-start;padding:14px}
-.cr-hud{position:relative;z-index:2;display:flex;gap:10px;margin:6px 0 12px}
-.cr-chip{background:linear-gradient(180deg,#33210f,#1c1108);border:2px solid var(--copper);border-radius:12px;
-  padding:6px 12px;font-size:.82rem;color:var(--cream);box-shadow:inset 0 1px 0 var(--copper-hi)}
-.cr-stage{position:relative;z-index:2;display:grid;grid-template-columns:76px 1fr 76px;gap:10px;
-  width:100%;max-width:560px;align-items:start}
-.cr-window{position:relative;height:340px;border:6px solid var(--copper);border-radius:26px;overflow:hidden;
-  background:#0a0e1e;box-shadow:0 0 0 3px var(--copper-hi),0 0 24px rgba(255,180,61,.14),8px 10px 0 rgba(0,0,0,.45)}
-.cr-window .sky{opacity:1}
-.cr-bubble{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:3;
-  background:#2a1f12;border:2px solid var(--copper);border-radius:10px;padding:6px 12px;font-size:.78rem;white-space:nowrap}
-.cr-core{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);z-index:2;
-  width:74px;height:140px;background:linear-gradient(160deg,#cc9cfa,#a45cec 55%,#6c34ac);
-  clip-path:polygon(50% 0,100% 42%,50% 100%,0 42%);
-  filter:drop-shadow(0 0 20px rgba(164,92,236,.7));animation:breathe 4s ease-in-out infinite}
-.cr-left,.cr-right{display:flex;flex-direction:column;gap:10px}
-.hot{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
-  background:linear-gradient(180deg,#33210f,#1c1108);border:3px solid var(--copper);border-radius:12px;
-  color:var(--cream);font-family:inherit;font-size:1.2rem;padding:8px 4px;
-  box-shadow:inset 0 1px 0 var(--copper-hi),3px 4px 0 rgba(0,0,0,.4)}
-.hot span{font-size:.6rem;color:var(--cream-dim)}
-.hot:active{transform:translate(2px,3px);box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
-.cr-explore{position:relative;z-index:2;margin-top:16px;cursor:pointer;
-  font-family:'Press Start 2P',monospace;font-size:1rem;color:#2a1a0a;
-  background:linear-gradient(180deg,#ffd98a,var(--amber));border:3px solid #a05a10;border-radius:14px;
-  padding:14px 40px;box-shadow:inset 0 2px 0 #fff6d0,4px 5px 0 rgba(0,0,0,.4)}
-.cr-explore:active{transform:translate(2px,3px)}
-.cr-toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);z-index:5;
-  background:#2a1f12;border:2px solid var(--copper);border-radius:10px;padding:8px 16px;color:var(--cream);font-size:.8rem}
+#scene-root .command{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  background:radial-gradient(120% 60% at 50% 120%,rgba(255,180,61,.12),transparent 55%),linear-gradient(180deg,rgba(36,26,18,.0) 30%,#1a130c 78%,#120b06 100%)}
+#scene-root .command::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(120,74,38,.10) 0 2px,transparent 2px 10px);opacity:.5}
+#scene-root .cr-hud{position:relative;z-index:3;display:flex;gap:8px;margin:16px 0 10px}
+#scene-root .chip{display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,#3a2612,#20130a);border:2px solid var(--copper);
+  border-radius:12px;padding:6px 12px;font-size:.8rem;box-shadow:inset 0 1px 0 var(--copper-hi),0 2px 0 rgba(0,0,0,.4)}
+#scene-root .chip b{color:var(--amber)}
+#scene-root .win{position:relative;z-index:2;width:330px;height:300px;margin-top:4px;border-radius:150px 150px 24px 24px;
+  border:8px solid var(--copper);overflow:hidden;background:#080a16;
+  box-shadow:0 0 0 4px var(--copper-hi2),0 0 34px rgba(255,180,61,.16),inset 0 0 40px rgba(0,0,0,.6),10px 12px 0 rgba(0,0,0,.4)}
+#scene-root .win .stars{inset:0;animation:twinkle 6s ease-in-out infinite}
+#scene-root .win .rivet{position:absolute;width:8px;height:8px;border-radius:50%;z-index:4;
+  background:radial-gradient(circle at 35% 35%,var(--copper-hi2),var(--copper-lo))}
+#scene-root .bubble{position:absolute;z-index:4;top:16px;left:50%;transform:translateX(-50%);background:#2a1f12;border:2px solid var(--copper);
+  border-radius:12px;padding:6px 14px;font-size:.76rem;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.4)}
+#scene-root .dais{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:2;width:150px;height:34px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,180,61,.35),transparent 70%)}
+#scene-root .win .crystal{position:absolute;left:50%;bottom:30px;transform:translateX(-50%) scale(.9);z-index:3}
+#scene-root .planet{position:absolute;top:40px;right:34px;width:44px;height:44px;border-radius:50%;z-index:2;
+  background:radial-gradient(circle at 32% 30%,#b46cff,#6c3ab8 70%,#3a1866);box-shadow:0 0 14px rgba(180,108,255,.4)}
+#scene-root .planet::after{content:"";position:absolute;left:-12px;top:16px;width:68px;height:12px;border:2px solid rgba(224,168,102,.6);border-radius:50%;transform:rotate(-18deg)}
+#scene-root .rows{position:absolute;z-index:3;top:150px;left:0;right:0;display:flex;justify-content:space-between;padding:0 12px}
+#scene-root .col{display:flex;flex-direction:column;gap:12px}
+#scene-root .obj{position:relative;width:66px;height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;
+  background:linear-gradient(180deg,#3a2612,#1c1108);border:3px solid var(--copper);border-radius:14px;color:var(--cream);font-size:1.3rem;
+  box-shadow:inset 0 1px 0 var(--copper-hi2),3px 4px 0 rgba(0,0,0,.4)}
+#scene-root .obj span{font-size:.56rem;color:var(--cream-dim)}
+#scene-root .obj:active{transform:translate(2px,3px);box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+#scene-root .led{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#8fbe6e;box-shadow:0 0 6px #8fbe6e;animation:blink 3s ease-in-out infinite}
+#scene-root .explore{position:relative;z-index:3;margin-top:auto;margin-bottom:96px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:1rem;color:#3a2408;
+  padding:16px 44px;border:3px solid #a05a10;border-radius:16px;background:linear-gradient(180deg,#ffe6a6,#ffb43d 55%,#e08a1e);
+  box-shadow:inset 0 2px 0 #fff6d0,inset 0 -3px 6px rgba(120,60,10,.4),0 0 22px rgba(255,180,61,.35),4px 6px 0 rgba(0,0,0,.4)}
+#scene-root .explore:active{transform:translate(2px,3px)}
+#scene-root .floor{position:absolute;left:0;right:0;bottom:0;height:70px;z-index:2;background:linear-gradient(180deg,#2a1c10,#160e07);
+  border-top:2px solid #3a2614;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 12px;font-size:1.5rem}
+#scene-root .rug{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:120px;height:16px;border:3px solid #a8433a;border-radius:50%;opacity:.7;z-index:2}
+#scene-root .toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);z-index:6;background:#2a1f12;border:2px solid var(--copper);border-radius:10px;padding:8px 16px;font-size:.8rem}
 
-@keyframes breathe{0%,100%{filter:drop-shadow(0 0 12px rgba(164,92,236,.45))}50%{filter:drop-shadow(0 0 22px rgba(164,92,236,.8))}}
-@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.core-mini,.cr-core,.prompt{animation:none}}
+@keyframes twinkle{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(-40px,-30px)}}
+@keyframes pulse{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(.95)}50%{opacity:.92;transform:translate(-50%,-50%) scale(1.08)}}
+@keyframes orbit{from{transform:rotate(0) translateX(46px) rotate(0)}to{transform:rotate(360deg) translateX(46px) rotate(-360deg)}}
+@keyframes blink{0%,100%{opacity:.45}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){#scene-root *{animation:none!important}}

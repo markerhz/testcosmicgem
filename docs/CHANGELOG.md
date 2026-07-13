@@ -1,5 +1,18 @@
 # Changelog
 
+## 🎨 (v0.6 Phase 1) Splash + Command Room — ยกระดับ ART ให้เนี้ยบ — 2026-07-13
+
+### งานภาพจริง (CSS art) ของ 2 จอ
+- **คริสตัลเจียระไน** clip-path หลายเหลี่ยม + ออร่าเรือง (halo pulse) + แถบแสง + ประกายโคจร
+- **Splash**: เนบิวลาหลายชั้น + ดาวระยิบ + ฝุ่นลอย, โลโก้ GEMVERSE gradient ทอง + เงาทองแดง, TAP TO START เป็น pill เรือง
+- **Command Room**: **พอร์ตโฮลทองเหลือง** (โค้งบน + หมุด 4 จุด) หุ้ม starfield + ดาวเคราะห์มีวงแหวน + คริสตัลบนแท่นมีไฟส่อง + speech bubble; ผนังไม้ + object panel มี LED + EXPLORE ปุ่มทองมันวาวเรือง + พื้นห้อง cozy (ต้นไม้/กาแฟ/แมว/พรม)
+- **starfield ต่อเนื่องข้ามจอ** (App สร้างเฟรม/space ครั้งเดียว, scene render ลง .slot)
+- `+ prefers-reduced-motion` ปิดอนิเมชันทั้งหมด
+
+### ไฟล์
+`css/scenes.css` (ยกเครื่อง), `js/ui/App.js` (เฟรม+slot), `SplashScene.js` / `CommandRoomScene.js` (markup เนี้ยบ) — ไม่แตะ gameplay ; เทส 86 ผ่าน
+
+
 ## 🚪 (v0.6 Phase 1) Splash + Command Room (static) — 2026-07-13
 
 ### จอแรกของเกม (DOM/CSS scene ผูก SceneManager) — overlay ทับเกม ไม่แตะ logic
